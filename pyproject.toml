@@ -1,0 +1,32 @@
+[project]
+name = "drgnet"
+version = "0.1.0"
+description = "DRG-NET: A graph neural network for computer-aided grading of diabetic retinopathy"
+dependencies = [
+    "numpy",
+    "pandas",
+    "torch",
+    "opencv-python-headless",
+    "torch-geometric",
+]
+readme = "README.md"
+
+[project.optional-dependencies]
+dev = ["black", "isort", "ruff", "pytest", "pytest-cov", "pre-commit"]
+notebook = ["ipykernel"]
+
+[build-system]
+requires = ["setuptools>=64.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.black]
+line-length = 120
+
+[tool.ruff]
+line-length = 120
+select = ["E", "F", "I", "RUF", "TCH"]
+fixable = ["I", "RUF100", "TCH"]
+fix = true
+
+[tool.ruff.isort]
+known-first-party = ["drgnet"]
