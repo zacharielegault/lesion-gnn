@@ -7,11 +7,11 @@ import cv2
 import numpy as np
 import pandas as pd
 import torch
-from torch_geometric.data import Data, Dataset
+from torch_geometric.data import Data, InMemoryDataset
 from tqdm import tqdm
 
 
-class Aptos(Dataset):
+class Aptos(InMemoryDataset):
     """APTOS 2019 Blindness Detection Dataset.
 
     For more information see https://www.kaggle.com/c/aptos2019-blindness-detection
@@ -45,7 +45,7 @@ class Aptos(Dataset):
         self.sigma = sigma
 
         super().__init__(root, transform, pre_transform, pre_filter, log)
-        self._diagnosis
+        self.data, self.slices = torch.load(self.processed_paths[0])
 
     @property
     def raw_file_names(self) -> List[str]:
@@ -59,11 +59,7 @@ class Aptos(Dataset):
     @property
     def processed_file_names(self) -> List[str]:
         """A list of files in the `processed_dir` which needs to be found in order to skip the processing."""
-        return [f"{code}.pt" for code in self._diagnosis["id_code"]]
-
-    # def download(self) -> None:
-    #     """Download raw data into `raw_dir`."""
-    #     raise NotImplementedError
+        return ["data.pt"]
 
     def process(self) -> None:
         """Process raw data and save it into the `processed_dir`."""
@@ -72,37 +68,40 @@ class Aptos(Dataset):
             for row in self._diagnosis.itertuples():
                 yield Path(self.raw_dir) / "train" / "images" / f"{row.id_code}.png", row.diagnosis
 
+        graphs = []
+
         if self.num_workers == 0:
             for path, label in tqdm(_path_and_label_generator(), total=len(self._diagnosis)):
-                _load_sift_save(
+                data = _load_sift(
                     img_path=path,
                     label=label,
-                    save_path=Path(self.processed_dir) / f"{path.stem}.pt",
                     num_keypoints=self.num_keypoints,
                     sigma=self.sigma,
                 )
+                graphs.append(data)
         else:
             raise NotImplementedError
 
-    def len(self) -> int:
-        """Return the number of examples in the dataset."""
-        return len(self._diagnosis)
-
-    def get(self, idx: int) -> Any:
-        """Return the data object at index `idx`."""
-        # FIXME: manage train/test split
-        path = Path(self.processed_dir) / f"{self._diagnosis.iloc[idx].id_code}.pt"
-        return torch.load(path)
-
-
-def _load_sift_save(img_path: Path, label: int, save_path: Path, num_keypoints: int, sigma: float) -> None:
-    """Load an image from a path and extract SIFT features from it."""
-    data = _load_sift(img_path=img_path, label=label, num_keypoints=num_keypoints, sigma=sigma)
-    torch.save(data, save_path)
+        torch.save((self.data, self.slices), self.processed_paths[0])
 
 
 def _load_sift(img_path: Path, label: int, num_keypoints: int, sigma: float) -> Data:
+    """Load an image and extract SIFT keypoints.
+
+    Args:
+        img_path (Path): path to the image
+        label (int): DR grade
+        num_keypoints (int): number of keypoints to extract
+        sigma (float): sigma for SIFT's Gaussian filter
+
+    Returns:
+        Data: a PyG `Data` object with the following attributes:
+            - `x` (Tensor): SIFT descriptors (num_keypoints, 128)
+            - `pos` (Tensor): (x, y) positions of the keypoints (num_keypoints, 2)
+            - `y` (Tensor): DR grade (1,)
+    """
     img = cv2.imread(str(img_path))
+    assert img is not None
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
     # Turn off the thresholding and keep the top `num_keypoints` keypoints.
