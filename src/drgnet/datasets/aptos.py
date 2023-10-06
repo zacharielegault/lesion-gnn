@@ -84,6 +84,31 @@ class Aptos(InMemoryDataset):
 
         torch.save((self.data, self.slices), self.processed_paths[0])
 
+    def split(self, train: float, val: float, test: float) -> Tuple["Aptos", "Aptos", "Aptos"]:
+        """Split the dataset into train, validation and test sets.
+
+        If `train + val + test != 1`, the dataset will be split proportionally to the given values.
+
+        Args:
+            train (float): proportion of the dataset to be used for training
+            val (float): proportion of the dataset to be used for validation
+            test (float): proportion of the dataset to be used for testing
+
+        Returns:
+            Tuple[Aptos, Aptos, Aptos]: train, validation and test datasets
+        """
+        split = np.cumsum([train, val, test])
+        split = split / split[-1]
+        idx = len(self) * split
+        idx = idx.astype(int)
+
+        dataset = self.shuffle()
+        train_dataset = dataset[: idx[0]]
+        val_dataset = dataset[idx[0] : idx[1]]
+        test_dataset = dataset[idx[1] :]
+
+        return train_dataset, val_dataset, test_dataset
+
 
 def _load_sift(img_path: Path, label: int, num_keypoints: int, sigma: float) -> Data:
     """Load an image and extract SIFT keypoints.
