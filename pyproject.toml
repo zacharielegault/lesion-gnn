@@ -12,7 +12,7 @@ dependencies = [
 readme = "README.md"
 
 [project.optional-dependencies]
-dev = ["black", "isort", "ruff", "pytest", "pytest-cov", "pre-commit"]
+dev = ["black", "ruff", "pytest", "pytest-cov", "pre-commit"]
 notebook = ["ipykernel"]
 
 [build-system]
