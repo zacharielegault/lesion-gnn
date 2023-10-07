@@ -52,3 +52,10 @@ def test_gaussian_distance():
         transform = GaussianDistance(sigma=1)
         data = transform(data)
         assert data.edge_attr.numel() == 0
+
+    # Test with cat=False
+    data = _data.clone()
+    transform = GaussianDistance(sigma=1, cat=False)
+    data = transform(data)
+    expected_edge_attr = torch.tensor([[0.2420], [0.2420]], dtype=torch.float)
+    torch.testing.assert_close(data.edge_attr, expected_edge_attr, rtol=1e-3, atol=1e-3)
