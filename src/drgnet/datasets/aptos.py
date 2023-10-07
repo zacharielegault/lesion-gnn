@@ -1,7 +1,7 @@
 import warnings
 from functools import cached_property
 from pathlib import Path
-from typing import Any, Callable, List, Tuple
+from typing import Any, Callable, Iterator, List, Tuple
 
 import cv2
 import numpy as np
@@ -64,7 +64,7 @@ class Aptos(InMemoryDataset):
     def process(self) -> None:
         """Process raw data and save it into the `processed_dir`."""
 
-        def _path_and_label_generator() -> Tuple[Path, int]:
+        def _path_and_label_generator() -> Iterator[Tuple[Path, int]]:
             for row in self._diagnosis.itertuples():
                 yield Path(self.raw_dir) / "train" / "images" / f"{row.id_code}.png", row.diagnosis
 
