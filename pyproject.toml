@@ -13,7 +13,8 @@ readme = "README.md"
 
 [project.optional-dependencies]
 dev = ["black", "ruff", "pytest", "pytest-cov", "pre-commit"]
-notebook = ["ipykernel"]
+notebook = ["ipykernel", "matplotlib"]
+all = ["drgnet[dev, notebook]"]
 
 [build-system]
 requires = ["setuptools>=64.0"]
