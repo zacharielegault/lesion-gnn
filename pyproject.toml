@@ -11,6 +11,9 @@ dependencies = [
 ]
 readme = "README.md"
 
+[project.scripts]
+train = "drgnet.scripts.train:main"
+
 [project.optional-dependencies]
 dev = ["black", "ruff", "pytest", "pytest-cov", "pre-commit"]
 notebook = ["ipykernel", "matplotlib"]
