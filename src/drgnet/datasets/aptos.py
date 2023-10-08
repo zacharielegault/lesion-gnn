@@ -32,8 +32,6 @@ class Aptos(InMemoryDataset):
         self,
         root: str | None = None,
         transform: Callable[..., Any] | None = None,
-        pre_transform: Callable[..., Any] | None = None,
-        pre_filter: Callable[..., Any] | None = None,
         log: bool = True,
         num_workers: int = 0,
         num_keypoints: int = 50,
@@ -42,10 +40,13 @@ class Aptos(InMemoryDataset):
         assert num_workers >= 0
         self.num_workers = num_workers
 
-        self.num_keypoints = num_keypoints
-        self.sigma = sigma
-
-        super().__init__(root, transform, pre_transform, pre_filter, log)
+        super().__init__(
+            root=root,
+            transform=transform,
+            pre_transform=_SiftTransform(num_keypoints=num_keypoints, sigma=sigma),
+            pre_filter=None,
+            log=log,
+        )
         self.data, self.slices = torch.load(self.processed_paths[0])
 
     @property
@@ -67,23 +68,21 @@ class Aptos(InMemoryDataset):
 
         def _path_and_label_generator() -> Iterator[Tuple[Path, int]]:
             for row in self._diagnosis.itertuples():
-                yield Path(self.raw_dir) / "train" / "images" / f"{row.id_code}.png", row.diagnosis
+                path = Path(self.raw_dir) / "train" / "images" / f"{row.id_code}.png"
+                label = row.diagnosis
+                yield path, label
 
         graphs = []
 
         if self.num_workers == 0:
             for path, label in tqdm(_path_and_label_generator(), total=len(self._diagnosis)):
-                data = _load_sift(
-                    img_path=path,
-                    label=label,
-                    num_keypoints=self.num_keypoints,
-                    sigma=self.sigma,
-                )
+                data = self.pre_transform(path, label)
                 graphs.append(data)
         else:
             raise NotImplementedError
 
-        torch.save((self.data, self.slices), self.processed_paths[0])
+        data, slices = self.collate(graphs)
+        torch.save((data, slices), self.processed_paths[0])
 
     def split(self, *splits: float) -> Tuple["Aptos", ...]:
         """Split the dataset into `len(splits)` datasets.
@@ -106,39 +105,55 @@ class Aptos(InMemoryDataset):
         return tuple(dataset[start:end] for start, end in pairwise(idx))
 
 
-def _load_sift(img_path: Path, label: int, num_keypoints: int, sigma: float) -> Data:
-    """Load an image and extract SIFT keypoints.
+class _SiftTransform:
+    def __init__(self, num_keypoints: int, sigma: float):
+        """Load an image and extract SIFT keypoints.
 
-    Args:
-        img_path (Path): path to the image
-        label (int): DR grade
-        num_keypoints (int): number of keypoints to extract
-        sigma (float): sigma for SIFT's Gaussian filter
+        Args:
+            num_keypoints (int): number of keypoints to extract
+            sigma (float): sigma for SIFT's Gaussian filter
+        """
+        self.num_keypoints = num_keypoints
+        self.sigma = sigma
 
-    Returns:
-        Data: a PyG `Data` object with the following attributes:
-            - `x` (Tensor): SIFT descriptors (num_keypoints, 128)
-            - `pos` (Tensor): (x, y) positions of the keypoints (num_keypoints, 2)
-            - `y` (Tensor): DR grade (1,)
-    """
-    img = cv2.imread(str(img_path))
-    assert img is not None
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    def __call__(self, img_path: Path, label: int) -> Data:
+        """Load an image and extract SIFT keypoints.
 
-    # Turn off the thresholding and keep the top `num_keypoints` keypoints.
-    sift = cv2.SIFT_create(nfeatures=num_keypoints, contrastThreshold=0, edgeThreshold=1e6, sigma=sigma)
+        Args:
+            img_path (Path): path to the image
+            label (int): DR grade
 
-    kpts, desc = sift.detectAndCompute(img, None)
+        Returns:
+            Data: a PyG `Data` object with the following attributes:
+                - `x` (Tensor): SIFT descriptors (num_keypoints, 128)
+                - `pos` (Tensor): (x, y) positions of the keypoints (num_keypoints, 2)
+                - `score` (Tensor): SIFT scores (num_keypoints,)
+                - `y` (Tensor): DR grade (1,)
+                - `name` (str): image name
+        """
+        img = cv2.imread(str(img_path))
+        assert img is not None
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
-    if len(kpts) == 0:
-        warnings.warn(f"Image {img_path} has no keypoints.")
-    elif len(kpts) < num_keypoints:
-        warnings.warn(f"Image {img_path} has less than {num_keypoints} keypoints.")
+        # Turn off the thresholding and keep the top `num_keypoints` keypoints.
+        sift = cv2.SIFT_create(nfeatures=self.num_keypoints, contrastThreshold=0, sigma=self.sigma)
 
-    data = Data(
-        x=torch.from_numpy(desc),
-        pos=torch.from_numpy(np.array([kpt.pt for kpt in kpts])),  # (x, y)
-        y=torch.tensor([label]),
-    )
+        kpts, desc = sift.detectAndCompute(img, None)
 
-    return data
+        if len(kpts) == 0:
+            warnings.warn(f"Image {img_path} has no keypoints.")
+        elif len(kpts) < self.num_keypoints:
+            warnings.warn(f"Image {img_path} has less than {self.num_keypoints} keypoints.")
+
+        data = Data(
+            x=torch.from_numpy(desc),
+            pos=torch.from_numpy(np.array([kpt.pt for kpt in kpts])),  # (x, y)
+            score=torch.from_numpy(np.array([kpt.response for kpt in kpts])),
+            y=torch.tensor([label]),
+            name=img_path.stem,
+        )
+
+        return data
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}(num_keypoints={self.num_keypoints}, sigma={self.sigma})"
