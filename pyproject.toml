@@ -4,9 +4,11 @@ version = "0.1.0"
 description = "DRG-NET: A graph neural network for computer-aided grading of diabetic retinopathy"
 dependencies = [
     "numpy",
-    "pandas",
-    "torch",
     "opencv-python-headless",
+    "pandas",
+    "pydantic",
+    "scikit-learn",
+    "torch",
     "torch-geometric",
 ]
 readme = "README.md"
