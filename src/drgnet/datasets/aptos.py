@@ -1,5 +1,6 @@
 import warnings
 from functools import cached_property
+from itertools import pairwise
 from pathlib import Path
 from typing import Any, Callable, Iterator, List, Tuple
 
@@ -84,30 +85,25 @@ class Aptos(InMemoryDataset):
 
         torch.save((self.data, self.slices), self.processed_paths[0])
 
-    def split(self, train: float, val: float, test: float) -> Tuple["Aptos", "Aptos", "Aptos"]:
-        """Split the dataset into train, validation and test sets.
+    def split(self, *splits: float) -> Tuple["Aptos", ...]:
+        """Split the dataset into `len(splits)` datasets.
 
-        If `train + val + test != 1`, the dataset will be split proportionally to the given values.
+        If `sum(splits) != 1`, the dataset will be split proportionally to the given values.
 
         Args:
-            train (float): proportion of the dataset to be used for training
-            val (float): proportion of the dataset to be used for validation
-            test (float): proportion of the dataset to be used for testing
+            *splits (float): proportions of the split
 
         Returns:
-            Tuple[Aptos, Aptos, Aptos]: train, validation and test datasets
+            Tuple[Aptos, ...]: a tuple of `Aptos` datasets
         """
-        split = np.cumsum([train, val, test])
+        splits = [0, *splits]
+        split = np.cumsum(splits)
         split = split / split[-1]
         idx = len(self) * split
         idx = idx.astype(int)
 
         dataset = self.shuffle()
-        train_dataset = dataset[: idx[0]]
-        val_dataset = dataset[idx[0] : idx[1]]
-        test_dataset = dataset[idx[1] :]
-
-        return train_dataset, val_dataset, test_dataset
+        return tuple(dataset[start:end] for start, end in pairwise(idx))
 
 
 def _load_sift(img_path: Path, label: int, num_keypoints: int, sigma: float) -> Data:
