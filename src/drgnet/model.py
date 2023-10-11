@@ -101,7 +101,7 @@ class DRGNetLightning(L.LightningModule):
         else:
             edge_index = batch.edge_index
 
-        logits = self.model(batch.x, edge_index, batch.batch, batch.edge_attr.squeeze())
+        logits = self.model(batch.x, edge_index, batch.batch, batch.edge_weight)
         loss = self.criterion(logits, batch.y)
         self.log("train_loss", loss)
         return loss
@@ -112,7 +112,7 @@ class DRGNetLightning(L.LightningModule):
         else:
             edge_index = batch.edge_index
 
-        logits = self(batch.x, edge_index, batch.batch, batch.edge_attr.squeeze())
+        logits = self(batch.x, edge_index, batch.batch, batch.edge_weight)
         loss = self.criterion(logits, batch.y)
         self.accuracy.update(logits.argmax(dim=1), batch.y)
         self.kappa.update(logits.argmax(dim=1), batch.y)

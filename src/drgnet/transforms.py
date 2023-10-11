@@ -1,16 +1,23 @@
 import math
 import warnings
+from enum import Enum
 
 import torch
 from torch_geometric.data import Data
 from torch_geometric.transforms import BaseTransform
 
 
+class SaveAs(Enum):
+    EDGE_WEIGHT_REPLACE = "edge_weight_replace"
+    EDGE_ATTR_CAT = "edge_attr_cat"
+    EDGE_ATTR_REPLACE = "edge_attr_replace"
+
+
 class GaussianDistance(BaseTransform):
     def __init__(
         self,
         sigma: float,
-        cat: bool = True,
+        save_as: SaveAs = SaveAs.EDGE_WEIGHT_REPLACE,
     ):
         """Gaussian weighted distance transform.
 
@@ -20,7 +27,7 @@ class GaussianDistance(BaseTransform):
         """
         self.sigma = sigma
         self._norm_const = math.sqrt(2 * math.pi * sigma**2)
-        self.cat = cat
+        self.save_as = save_as
 
     def __call__(self, data: Data) -> Data:
         if data.edge_index.numel() == 0:
@@ -31,13 +38,21 @@ class GaussianDistance(BaseTransform):
 
         sq_dist = (pos[row] - pos[col]).pow(2).sum(dim=-1)
         dist = torch.exp(-sq_dist / (2 * self.sigma**2)) / self._norm_const
-        dist = dist.view(-1, 1)
 
-        if pseudo is not None and self.cat:
-            pseudo = pseudo.view(-1, 1) if pseudo.dim() == 1 else pseudo
-            data.edge_attr = torch.cat([pseudo, dist.type_as(pseudo)], dim=-1)
-        else:
-            data.edge_attr = dist
+        match self.save_as:
+            case SaveAs.EDGE_WEIGHT_REPLACE:
+                data.edge_weight = dist
+            case SaveAs.EDGE_ATTR_CAT:
+                dist = dist.view(-1, 1)
+
+                if pseudo is not None:
+                    pseudo = pseudo.view(-1, 1) if pseudo.dim() == 1 else pseudo
+                    data.edge_attr = torch.cat([pseudo, dist.type_as(pseudo)], dim=-1)
+                else:
+                    data.edge_attr = dist
+            case SaveAs.EDGE_ATTR_REPLACE:
+                dist = dist.view(-1, 1)
+                data.edge_attr = dist
 
         return data
 
