@@ -1,11 +1,14 @@
 from itertools import pairwise
 from typing import Tuple
 
+import lightning as L
 import torch
 import torch.nn.functional as F
 from torch import Tensor, nn
+from torch_geometric.data import Data
 from torch_geometric.nn import MLP, GraphConv, SortAggregation
 from torch_sparse import SparseTensor
+from torchmetrics import Accuracy, CohenKappa
 
 
 class DRGNet(nn.Module):
@@ -44,7 +47,7 @@ class DRGNet(nn.Module):
 
     def forward(
         self, x: Tensor, edge_index: Tensor | SparseTensor, batch: Tensor, edge_weight: Tensor | None = None
-    ) -> None:
+    ) -> Tensor:
         xs = []
         for graph_conv in self.graph_convs:
             x = F.elu(graph_conv(x, edge_index, edge_weight))
@@ -62,3 +65,60 @@ class DRGNet(nn.Module):
         logits = self.mlp(x)  # (num_graphs, num_classes)
 
         return logits
+
+
+class DRGNetLightning(L.LightningModule):
+    def __init__(
+        self,
+        input_features: int,
+        gnn_hidden_dim: int,
+        num_layers: int,
+        sort_keep: int,
+        num_classes: int,
+        conv_hidden_dims: Tuple[int, int] = (16, 32),
+    ) -> None:
+        super().__init__()
+        self.model = DRGNet(
+            input_features=input_features,
+            gnn_hidden_dim=gnn_hidden_dim,
+            num_layers=num_layers,
+            sort_keep=sort_keep,
+            num_classes=num_classes,
+            conv_hidden_dims=conv_hidden_dims,
+        )
+        self.criterion = nn.CrossEntropyLoss()
+        self.accuracy = Accuracy(task="multiclass", num_classes=num_classes)
+        self.kappa = CohenKappa(task="multiclass", num_classes=num_classes, weights="quadratic")
+
+    def forward(
+        self, x: Tensor, edge_index: Tensor | SparseTensor, batch: Tensor, edge_weight: Tensor | None = None
+    ) -> Tensor:
+        return self.model(x, edge_index, batch, edge_weight)
+
+    def training_step(self, batch: Data, batch_idx: int) -> Tensor:
+        if hasattr(batch, "adj_t"):
+            edge_index = batch.adj_t
+        else:
+            edge_index = batch.edge_index
+
+        logits = self.model(batch.x, edge_index, batch.batch, batch.edge_attr.squeeze())
+        loss = self.criterion(logits, batch.y)
+        self.log("train_loss", loss)
+        return loss
+
+    def validation_step(self, batch: Data, batch_idx: int) -> None:
+        if hasattr(batch, "adj_t"):
+            edge_index = batch.adj_t
+        else:
+            edge_index = batch.edge_index
+
+        logits = self(batch.x, edge_index, batch.batch, batch.edge_attr.squeeze())
+        loss = self.criterion(logits, batch.y)
+        self.accuracy.update(logits.argmax(dim=1), batch.y)
+        self.kappa.update(logits.argmax(dim=1), batch.y)
+        self.log("val_loss", loss, batch_size=batch.num_graphs)
+        self.log("val_acc", self.accuracy, on_step=False, on_epoch=True, batch_size=batch.num_graphs)
+        self.log("val_kappa", self.kappa, on_step=False, on_epoch=True, batch_size=batch.num_graphs)
+
+    def configure_optimizers(self) -> torch.optim.Optimizer:
+        return torch.optim.Adam(self.parameters(), lr=0.001)
