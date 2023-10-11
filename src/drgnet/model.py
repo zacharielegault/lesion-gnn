@@ -8,7 +8,7 @@ from torch import Tensor, nn
 from torch_geometric.data import Data
 from torch_geometric.nn import MLP, GraphConv, SortAggregation
 from torch_sparse import SparseTensor
-from torchmetrics import Accuracy, CohenKappa
+from torchmetrics import Accuracy, CohenKappa, MetricCollection
 
 
 class DRGNet(nn.Module):
@@ -87,8 +87,13 @@ class DRGNetLightning(L.LightningModule):
             conv_hidden_dims=conv_hidden_dims,
         )
         self.criterion = nn.CrossEntropyLoss()
-        self.accuracy = Accuracy(task="multiclass", num_classes=num_classes)
-        self.kappa = CohenKappa(task="multiclass", num_classes=num_classes, weights="quadratic")
+        self.classification_metrics = MetricCollection(
+            {
+                "acc": Accuracy(task="multiclass", num_classes=num_classes),
+                "kappa": CohenKappa(task="multiclass", num_classes=num_classes, weights="quadratic"),
+            },
+            prefix="val_",
+        )
 
     def forward(
         self, x: Tensor, edge_index: Tensor | SparseTensor, batch: Tensor, edge_weight: Tensor | None = None
@@ -114,11 +119,10 @@ class DRGNetLightning(L.LightningModule):
 
         logits = self(batch.x, edge_index, batch.batch, batch.edge_weight)
         loss = self.criterion(logits, batch.y)
-        self.accuracy.update(logits.argmax(dim=1), batch.y)
-        self.kappa.update(logits.argmax(dim=1), batch.y)
         self.log("val_loss", loss, batch_size=batch.num_graphs)
-        self.log("val_acc", self.accuracy, on_step=False, on_epoch=True, batch_size=batch.num_graphs)
-        self.log("val_kappa", self.kappa, on_step=False, on_epoch=True, batch_size=batch.num_graphs)
+        self.log_dict(
+            self.classification_metrics(logits, batch.y), batch_size=batch.num_graphs, on_step=False, on_epoch=True
+        )
 
     def configure_optimizers(self) -> torch.optim.Optimizer:
         return torch.optim.Adam(self.parameters(), lr=0.001)
