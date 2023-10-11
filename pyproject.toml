@@ -20,7 +20,14 @@ readme = "README.md"
 train = "drgnet.scripts.train:main"
 
 [project.optional-dependencies]
-dev = ["black", "ruff", "pytest", "pytest-cov", "pre-commit"]
+dev = [
+    "black",
+    "ruff",
+    "pytest",
+    "pytest-cov",
+    "pre-commit",
+    "torch-tb-profiler",
+]
 notebook = ["ipykernel", "matplotlib"]
 all = ["drgnet[dev, notebook]"]
 
