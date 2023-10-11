@@ -8,7 +8,8 @@ from torch import Tensor, nn
 from torch_geometric.data import Data
 from torch_geometric.nn import MLP, GraphConv, SortAggregation
 from torch_sparse import SparseTensor
-from torchmetrics import Accuracy, CohenKappa, MetricCollection
+from torchmetrics import MetricCollection
+from torchmetrics.classification import Accuracy, CohenKappa, F1Score, Precision, Recall
 
 
 class DRGNet(nn.Module):
@@ -89,8 +90,11 @@ class DRGNetLightning(L.LightningModule):
         self.criterion = nn.CrossEntropyLoss()
         self.classification_metrics = MetricCollection(
             {
-                "acc": Accuracy(task="multiclass", num_classes=num_classes),
+                "micro_acc": Accuracy(task="multiclass", num_classes=num_classes, average="micro"),
                 "kappa": CohenKappa(task="multiclass", num_classes=num_classes, weights="quadratic"),
+                "macro_f1": F1Score(task="multiclass", num_classes=num_classes, average="macro"),
+                "macro_precision": Precision(task="multiclass", num_classes=num_classes, average="macro"),
+                "macro_recall": Recall(task="multiclass", num_classes=num_classes, average="macro"),
             },
             prefix="val_",
         )
