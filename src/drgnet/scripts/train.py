@@ -5,7 +5,7 @@ from pathlib import Path
 
 import lightning as L
 import yaml
-from lightning.pytorch.callbacks import EarlyStopping
+from lightning.pytorch.callbacks import ModelCheckpoint
 from pydantic import BaseModel
 from torch_geometric.loader import DataLoader
 from torch_geometric.transforms import Compose, RadiusGraph, ToSparseTensor
@@ -16,15 +16,15 @@ from drgnet.transforms import GaussianDistance
 
 
 def main():
-    L.seed_everything(42)
-
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=str, help="Path to YAML config file.")
     args = parser.parse_args("--config configs/aptos.yaml".split(" "))
 
     config_path = Path(args.config)
-    config = TrainConfig.parse_yaml(config_path)
+    config = Config.parse_yaml(config_path)
     print(config)
+
+    L.seed_everything(config.seed)
 
     # Dataset
     transform = Compose(
@@ -50,23 +50,33 @@ def main():
     val_loader = DataLoader(val, batch_size=config.batch_size, shuffle=False)
 
     # Model
-    model = DRGNetLightning(dataset.num_features, 32, 4, 50, dataset.num_classes)
+    model = DRGNetLightning(
+        input_features=dataset.num_features,
+        gnn_hidden_dim=config.model.gnn_hidden_dim,
+        num_layers=config.model.num_layers,
+        sortpool_k=config.model.sortpool_k,
+        num_classes=dataset.num_classes,
+        conv_hidden_dims=config.model.conv_hidden_dims,
+    )
 
     # Training
     trainer = L.Trainer(
         devices=[0],
-        max_epochs=210,
-        callbacks=[EarlyStopping(monitor="val_kappa", patience=20, mode="max")],
+        max_epochs=config.max_epochs,
+        callbacks=[ModelCheckpoint(monitor="val_kappa", mode="max")],
     )
     trainer.fit(model, train_loader, val_loader)
 
 
-class TrainConfig(BaseModel):
+class Config(BaseModel):
     dataset: "DatasetConfig"
+    model: "ModelConfig"
     batch_size: int
+    max_epochs: int
+    seed: int
 
     @classmethod
-    def parse_yaml(cls, path: Path) -> "TrainConfig":
+    def parse_yaml(cls, path: Path) -> "Config":
         with open(path, "r") as f:
             config = yaml.safe_load(f)
         return cls(**config)
@@ -75,10 +85,17 @@ class TrainConfig(BaseModel):
 class DatasetConfig(BaseModel):
     name: str
     root: str
-    split: list[float]
+    split: tuple[float, float]
     num_keypoints: int
     sift_sigma: float
     distance_sigma_px: float
+
+
+class ModelConfig(BaseModel):
+    gnn_hidden_dim: int
+    num_layers: int
+    sortpool_k: int
+    conv_hidden_dims: tuple[int, int]
 
 
 if __name__ == "__main__":
