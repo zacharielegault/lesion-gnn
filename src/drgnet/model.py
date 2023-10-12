@@ -1,5 +1,4 @@
 from itertools import pairwise
-from typing import Tuple
 
 import lightning as L
 import torch
@@ -18,9 +17,9 @@ class DRGNet(nn.Module):
         input_features: int,
         gnn_hidden_dim: int,
         num_layers: int,
-        sort_keep: int,
+        sortpool_k: int,
         num_classes: int,
-        conv_hidden_dims: Tuple[int, int] = (16, 32),
+        conv_hidden_dims: tuple[int, int] = (16, 32),
     ) -> None:
         super().__init__()
 
@@ -33,7 +32,7 @@ class DRGNet(nn.Module):
         total_latent_dim = gnn_hidden_dim * num_layers + 1
 
         # Sort pooling
-        self.sort_pool = SortAggregation(sort_keep)
+        self.sort_pool = SortAggregation(sortpool_k)
 
         # Conv layers
         kernel_size = 5  # Kernel size for the second conv layer
@@ -42,7 +41,7 @@ class DRGNet(nn.Module):
         self.conv2 = nn.Conv1d(conv_hidden_dims[0], conv_hidden_dims[1], kernel_size=kernel_size, stride=1)
 
         # MLP
-        dense_dim = int((sort_keep - 2) / 2 + 1)  # Convolution math to compute output size
+        dense_dim = int((sortpool_k - 2) / 2 + 1)  # Convolution math to compute output size
         dense_dim = (dense_dim - kernel_size + 1) * conv_hidden_dims[1]
         self.mlp = MLP([dense_dim, 128, num_classes], dropout=0.5, norm=None, act=F.elu)
 
@@ -55,8 +54,8 @@ class DRGNet(nn.Module):
             xs.append(x)
         x_cat = torch.cat(xs, dim=1)  # (num_nodes, hidden_dim * num_layers)
 
-        x = self.sort_pool(x_cat, batch)  # (num_graphs, hidden_dim * num_layers * sort_keep)
-        x = x.unsqueeze(1)  # (num_graphs, 1, (hidden_dim * num_layers + 1) * sort_keep)
+        x = self.sort_pool(x_cat, batch)  # (num_graphs, hidden_dim * num_layers * sortpool_k)
+        x = x.unsqueeze(1)  # (num_graphs, 1, (hidden_dim * num_layers + 1) * sortpool_k)
 
         x = F.elu(self.conv1(x))
         x = self.max_pool(x)
@@ -74,16 +73,16 @@ class DRGNetLightning(L.LightningModule):
         input_features: int,
         gnn_hidden_dim: int,
         num_layers: int,
-        sort_keep: int,
+        sortpool_k: int,
         num_classes: int,
-        conv_hidden_dims: Tuple[int, int] = (16, 32),
+        conv_hidden_dims: tuple[int, int] = (16, 32),
     ) -> None:
         super().__init__()
         self.model = DRGNet(
             input_features=input_features,
             gnn_hidden_dim=gnn_hidden_dim,
             num_layers=num_layers,
-            sort_keep=sort_keep,
+            sortpool_k=sortpool_k,
             num_classes=num_classes,
             conv_hidden_dims=conv_hidden_dims,
         )
