@@ -28,7 +28,7 @@ Make sure the [pre-commit hooks](https://pre-commit.com/) are installed:
 pre-commit install
 ```
 
-To run the tests, run the following command:
+Test coverage is currently quite low. Any contributions to increase it are welcome. To run the tests, run the following command:
 ```bash
 pytest --cov=drgnet --cov-report=html
 ```
