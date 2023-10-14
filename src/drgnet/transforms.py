@@ -18,6 +18,7 @@ class GaussianDistance(BaseTransform):
         self,
         sigma: float,
         save_as: SaveAs = SaveAs.EDGE_WEIGHT_REPLACE,
+        dtype: torch.dtype = torch.float32,
     ):
         """Gaussian weighted distance transform.
 
@@ -28,6 +29,7 @@ class GaussianDistance(BaseTransform):
         self.sigma = sigma
         self._norm_const = math.sqrt(2 * math.pi * sigma**2)
         self.save_as = save_as
+        self.dtype = dtype
 
     def __call__(self, data: Data) -> Data:
         if data.edge_index.numel() == 0:
@@ -38,6 +40,7 @@ class GaussianDistance(BaseTransform):
 
         sq_dist = (pos[row] - pos[col]).pow(2).sum(dim=-1)
         dist = torch.exp(-sq_dist / (2 * self.sigma**2)) / self._norm_const
+        dist = dist.to(self.dtype)
 
         match self.save_as:
             case SaveAs.EDGE_WEIGHT_REPLACE:
