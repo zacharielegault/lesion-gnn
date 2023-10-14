@@ -31,9 +31,10 @@ def main():
         [
             RadiusGraph(3 * config.dataset.distance_sigma_px),
             GaussianDistance(sigma=config.dataset.distance_sigma_px),
-            ToSparseTensor(),
         ]
     )
+    if not config.model.compile:
+        transform.transforms.append(ToSparseTensor())
 
     if config.dataset.name.lower() == "aptos":
         dataset = Aptos(
@@ -57,6 +58,7 @@ def main():
         sortpool_k=config.model.sortpool_k,
         num_classes=dataset.num_classes,
         conv_hidden_dims=config.model.conv_hidden_dims,
+        compile=config.model.compile,
     )
 
     # Training
@@ -96,6 +98,7 @@ class ModelConfig(BaseModel):
     num_layers: int
     sortpool_k: int
     conv_hidden_dims: tuple[int, int]
+    compile: bool
 
 
 if __name__ == "__main__":
