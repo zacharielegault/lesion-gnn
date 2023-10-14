@@ -30,5 +30,5 @@ pre-commit install
 
 Test coverage is currently quite low. Any contributions to increase it are welcome. To run the tests, run the following command:
 ```bash
-pytest --cov=drgnet --cov-report=html
+pytest --cov=drgnet
 ```
