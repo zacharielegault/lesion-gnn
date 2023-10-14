@@ -3,6 +3,7 @@ from itertools import pairwise
 import lightning as L
 import torch
 import torch.nn.functional as F
+import torch_geometric
 from torch import Tensor, nn
 from torch_geometric.data import Data
 from torch_geometric.nn import MLP, GraphConv, SortAggregation
@@ -76,9 +77,10 @@ class DRGNetLightning(L.LightningModule):
         sortpool_k: int,
         num_classes: int,
         conv_hidden_dims: tuple[int, int] = (16, 32),
+        compile: bool = False,
     ) -> None:
         super().__init__()
-        self.model = DRGNet(
+        model = DRGNet(
             input_features=input_features,
             gnn_hidden_dim=gnn_hidden_dim,
             num_layers=num_layers,
@@ -86,6 +88,7 @@ class DRGNetLightning(L.LightningModule):
             num_classes=num_classes,
             conv_hidden_dims=conv_hidden_dims,
         )
+        self.model = torch_geometric.compile(model, dynamic=True) if compile else model
         self.criterion = nn.CrossEntropyLoss()
         self.classification_metrics = MetricCollection(
             {
