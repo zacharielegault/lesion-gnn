@@ -18,7 +18,7 @@ from drgnet.transforms import GaussianDistance
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=str, help="Path to YAML config file.")
-    args = parser.parse_args("--config configs/aptos.yaml".split(" "))
+    args = parser.parse_args()
 
     config_path = Path(args.config)
     config = Config.parse_yaml(config_path)
