@@ -11,6 +11,15 @@ from torch_sparse import SparseTensor
 from torchmetrics import MetricCollection
 from torchmetrics.classification import Accuracy, CohenKappa, F1Score, Precision, Recall
 
+from drgnet.metrics import (
+    ReferableDRAccuracy,
+    ReferableDRAUROC,
+    ReferableDRAveragePrecision,
+    ReferableDRF1,
+    ReferableDRPrecision,
+    ReferableDRRecall,
+)
+
 
 class DRGNet(nn.Module):
     def __init__(
@@ -90,13 +99,25 @@ class DRGNetLightning(L.LightningModule):
         )
         self.model = torch_geometric.compile(model, dynamic=True) if compile else model
         self.criterion = nn.CrossEntropyLoss()
-        self.classification_metrics = MetricCollection(
+        self.multiclass_metrics = MetricCollection(
             {
                 "micro_acc": Accuracy(task="multiclass", num_classes=num_classes, average="micro"),
                 "kappa": CohenKappa(task="multiclass", num_classes=num_classes, weights="quadratic"),
                 "macro_f1": F1Score(task="multiclass", num_classes=num_classes, average="macro"),
                 "macro_precision": Precision(task="multiclass", num_classes=num_classes, average="macro"),
                 "macro_recall": Recall(task="multiclass", num_classes=num_classes, average="macro"),
+            },
+            prefix="val_",
+        )
+
+        self.referable_metrics = MetricCollection(
+            {
+                "acc": ReferableDRAccuracy(),
+                "auroc": ReferableDRAUROC(),
+                "auprc": ReferableDRAveragePrecision(),
+                "f1": ReferableDRF1(),
+                "precision": ReferableDRPrecision(),
+                "recall": ReferableDRRecall(),
             },
             prefix="val_",
         )
@@ -114,7 +135,7 @@ class DRGNetLightning(L.LightningModule):
 
         logits = self.model(batch.x, edge_index, batch.batch, batch.edge_weight)
         loss = self.criterion(logits, batch.y)
-        self.log("train_loss", loss)
+        self.log("train_loss", loss, batch_size=batch.num_graphs, on_step=False, on_epoch=True)
         return loss
 
     def validation_step(self, batch: Data, batch_idx: int) -> None:
@@ -127,7 +148,10 @@ class DRGNetLightning(L.LightningModule):
         loss = self.criterion(logits, batch.y)
         self.log("val_loss", loss, batch_size=batch.num_graphs)
         self.log_dict(
-            self.classification_metrics(logits, batch.y), batch_size=batch.num_graphs, on_step=False, on_epoch=True
+            self.multiclass_metrics(logits, batch.y), batch_size=batch.num_graphs, on_step=False, on_epoch=True
+        )
+        self.log_dict(
+            self.referable_metrics(logits, batch.y), batch_size=batch.num_graphs, on_step=False, on_epoch=True
         )
 
     def configure_optimizers(self) -> torch.optim.Optimizer:
