@@ -155,4 +155,4 @@ class DRGNetLightning(L.LightningModule):
         )
 
     def configure_optimizers(self) -> torch.optim.Optimizer:
-        return torch.optim.Adam(self.parameters(), lr=0.001)
+        return torch.optim.AdamW(self.parameters(), lr=0.001, weight_decay=0.01)

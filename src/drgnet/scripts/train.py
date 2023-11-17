@@ -2,15 +2,18 @@
 
 import argparse
 from pathlib import Path
+from typing import Optional
 
 import lightning as L
 import yaml
 from lightning.pytorch.callbacks import ModelCheckpoint
+from lightning.pytorch.loggers import WandbLogger
 from pydantic import BaseModel
 from torch_geometric.loader import DataLoader
 from torch_geometric.transforms import Compose, RadiusGraph, ToSparseTensor
 
-from drgnet.datasets import Aptos
+import wandb
+from drgnet.datasets import Aptos, LESIONSArgs, SIFTArgs
 from drgnet.model import DRGNetLightning
 from drgnet.transforms import GaussianDistance
 
@@ -25,23 +28,36 @@ def main():
     print(config)
 
     L.seed_everything(config.seed)
+    logger = WandbLogger(
+        project=config.project_name,
+        settings=wandb.Settings(code_dir="."),
+        entity="liv4d-polytechnique",
+        tags=[config.tag],
+        config=config.model_dump(),
+    )
 
     # Dataset
     transform = Compose(
         [
-            RadiusGraph(3 * config.dataset.distance_sigma_px),
+            RadiusGraph(3 * config.dataset.distance_sigma_px, loop=True),
             GaussianDistance(sigma=config.dataset.distance_sigma_px),
         ]
     )
     if not config.model.compile:
         transform.transforms.append(ToSparseTensor())
+    
+    if config.tag.lower() == "sift":
+            kwargs:SIFTArgs = dict(num_keypoints=config.dataset.num_keypoints, sigma=config.dataset.sift_sigma)
+    elif config.tag.lower() == "lesions":
+        kwargs:LESIONSArgs = dict(which_features=config.dataset.which_features, 
+                                    feature_layer=config.dataset.feature_layer)
 
     if config.dataset.name.lower() == "aptos":
         dataset = Aptos(
             root=config.dataset.root,
             transform=transform,
-            num_keypoints=config.dataset.num_keypoints,
-            sigma=config.dataset.sift_sigma,
+            mode=config.tag,
+            **kwargs,
         )
     else:
         raise ValueError(f"Unknown dataset: {config.dataset.name}")
@@ -65,6 +81,8 @@ def main():
     trainer = L.Trainer(
         devices=[0],
         max_epochs=config.max_epochs,
+        logger=logger,
+        check_val_every_n_epoch=15,
         callbacks=[ModelCheckpoint(monitor="val_kappa", mode="max")],
     )
     trainer.fit(model, train_loader, val_loader)
@@ -76,6 +94,8 @@ class Config(BaseModel):
     batch_size: int
     max_epochs: int
     seed: int
+    project_name: str
+    tag: str
 
     @classmethod
     def parse_yaml(cls, path: Path) -> "Config":
@@ -88,9 +108,12 @@ class DatasetConfig(BaseModel):
     name: str
     root: str
     split: tuple[float, float]
-    num_keypoints: int
-    sift_sigma: float
+    num_keypoints: Optional[int] = None
+    sift_sigma: Optional[float] = None
     distance_sigma_px: float
+    which_features: Optional[str] = None
+    feature_layer: Optional[int] = None
+
 
 
 class ModelConfig(BaseModel):

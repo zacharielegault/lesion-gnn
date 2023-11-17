@@ -10,7 +10,9 @@ model:
   num_layers: 4
   sortpool_k: 50
   conv_hidden_dims: [16, 32]
-  compile: true
+  compile: false
 batch_size: 64
 max_epochs: 210
 seed: 42
+project_name: Aptos-GNN
+tag: SIFT
