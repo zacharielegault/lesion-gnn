@@ -119,8 +119,15 @@ class DRGNetLightning(L.LightningModule):
                 "precision": ReferableDRPrecision(),
                 "recall": ReferableDRRecall(),
             },
-            prefix="val_",
+            prefix="val_referable_",
         )
+
+        self.aptos_multiclass_metrics = self.multiclass_metrics.clone(prefix="test_aptos_")
+        self.ddr_multiclass_metrics = self.multiclass_metrics.clone(prefix="test_ddr_")
+
+        self.aptos_referable_metrics = self.referable_metrics.clone(prefix="test_referable_aptos_")
+        self.ddr_referable_metrics = self.referable_metrics.clone(prefix="test_referable_ddr_")
+
 
     def forward(
         self, x: Tensor, edge_index: Tensor | SparseTensor, batch: Tensor, edge_weight: Tensor | None = None
@@ -153,6 +160,25 @@ class DRGNetLightning(L.LightningModule):
         self.log_dict(
             self.referable_metrics(logits, batch.y), batch_size=batch.num_graphs, on_step=False, on_epoch=True
         )
+
+    def test_step(self, batch: Data, batch_idx: int) -> None:
+        if hasattr(batch, "adj_t"):
+            edge_index = batch.adj_t
+        else:
+            edge_index = batch.edge_index
+
+        logits = self(batch.x, edge_index, batch.batch, batch.edge_weight)
+        dataset_name = self.trainer.test_dataloaders.dataset.dataset_name
+        if dataset_name == "Aptos":
+            multiclass_metric = self.aptos_multiclass_metrics
+            referable_metric = self.aptos_referable_metrics
+        elif dataset_name == "DDR_test":
+            multiclass_metric = self.ddr_multiclass_metrics
+            referable_metric = self.ddr_referable_metrics
+
+        self.log_dict(multiclass_metric(logits, batch.y), batch_size=batch.num_graphs, on_step=False, on_epoch=True)
+        self.log_dict(referable_metric(logits, batch.y), batch_size=batch.num_graphs, on_step=False, on_epoch=True)
+        return torch.argmax(logits, dim=1), batch.y
 
     def configure_optimizers(self) -> torch.optim.Optimizer:
         return torch.optim.AdamW(self.parameters(), lr=0.001, weight_decay=0.01)

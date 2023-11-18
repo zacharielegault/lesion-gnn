@@ -4,6 +4,9 @@
 # Lightning logs
 lightning_logs/
 
+# Weights & Biases
+wandb/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

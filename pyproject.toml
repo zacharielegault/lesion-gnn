@@ -13,6 +13,7 @@ dependencies = [
     "lightning",
     "torchmetrics",
     "tensorboard",
+    "fundus_lesions_toolkit"
 ]
 readme = "README.md"
 
