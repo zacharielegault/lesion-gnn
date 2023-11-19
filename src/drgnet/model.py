@@ -1,4 +1,5 @@
 from itertools import pairwise
+from typing import Literal
 
 import lightning as L
 import torch
@@ -87,6 +88,9 @@ class DRGNetLightning(L.LightningModule):
         num_classes: int,
         conv_hidden_dims: tuple[int, int] = (16, 32),
         compile: bool = False,
+        lr: float = 0.001,
+        weight_decay: float = 0.01,
+        optimizer_algo: Literal["adam", "adamw", "sgd"] = "adamw",
     ) -> None:
         super().__init__()
         model = DRGNet(
@@ -99,13 +103,22 @@ class DRGNetLightning(L.LightningModule):
         )
         self.model = torch_geometric.compile(model, dynamic=True) if compile else model
         self.criterion = nn.CrossEntropyLoss()
+
+        self.num_classes = num_classes
+        self.lr = lr
+        self.weight_decay = weight_decay
+        self.optimizer_algo = optimizer_algo
+
+        self.setup_metric()
+
+    def setup_metric(self):
         self.multiclass_metrics = MetricCollection(
             {
-                "micro_acc": Accuracy(task="multiclass", num_classes=num_classes, average="micro"),
-                "kappa": CohenKappa(task="multiclass", num_classes=num_classes, weights="quadratic"),
-                "macro_f1": F1Score(task="multiclass", num_classes=num_classes, average="macro"),
-                "macro_precision": Precision(task="multiclass", num_classes=num_classes, average="macro"),
-                "macro_recall": Recall(task="multiclass", num_classes=num_classes, average="macro"),
+                "micro_acc": Accuracy(task="multiclass", num_classes=self.num_classes, average="micro"),
+                "kappa": CohenKappa(task="multiclass", num_classes=self.num_classes, weights="quadratic"),
+                "macro_f1": F1Score(task="multiclass", num_classes=self.num_classes, average="macro"),
+                "macro_precision": Precision(task="multiclass", num_classes=self.num_classes, average="macro"),
+                "macro_recall": Recall(task="multiclass", num_classes=self.num_classes, average="macro"),
             },
             prefix="val_",
         )
@@ -127,7 +140,6 @@ class DRGNetLightning(L.LightningModule):
 
         self.aptos_referable_metrics = self.referable_metrics.clone(prefix="test_referable_aptos_")
         self.ddr_referable_metrics = self.referable_metrics.clone(prefix="test_referable_ddr_")
-
 
     def forward(
         self, x: Tensor, edge_index: Tensor | SparseTensor, batch: Tensor, edge_weight: Tensor | None = None
@@ -181,4 +193,11 @@ class DRGNetLightning(L.LightningModule):
         return torch.argmax(logits, dim=1), batch.y
 
     def configure_optimizers(self) -> torch.optim.Optimizer:
-        return torch.optim.AdamW(self.parameters(), lr=0.001, weight_decay=0.01)
+        match self.optimizer_algo:
+            case "adam":
+                return torch.optim.Adam(self.parameters(), lr=self.lr, weight_decay=self.weight_decay)
+            case "adamw":      
+                return torch.optim.AdamW(self.parameters(), lr=self.lr, weight_decay=self.weight_decay)
+            case "sgd":
+                return torch.optim.SGD(self.parameters(), lr=self.lr, weight_decay=self.weight_decay)
+            
