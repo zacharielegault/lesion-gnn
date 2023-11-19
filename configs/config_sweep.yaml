@@ -1,0 +1,41 @@
+program: src/drgnet/scripts/train_sweep.py
+method: bayes
+metric: 
+  name: val_kappa
+  goal: maximize
+parameters:
+  lr:
+    min: 0.00001
+    max: 0.05
+  weight_decay:
+    min: 0.000001
+    max: 0.05
+  optimizer:
+    values: [adam, sgd, adamw]
+  gnn_hidden_dim:
+    min: 16
+    max: 128
+    distribution: int_uniform
+  num_layers:
+    min: 2
+    max: 10
+    distribution: int_uniform
+  sortpool_k:
+    min: 8
+    max: 128
+    distribution: int_uniform
+  distance_sigma_px:
+    min: 5.0
+    max: 100.0
+    distribution: uniform
+    
+early_terminate:
+  type: hyperband
+  min_iter: 5
+command:
+  - ${interpreter}
+  - ${program}
+  - "--config"
+  - "configs/ddr_aptos_lesions.yaml"
+  - ${args}
+
