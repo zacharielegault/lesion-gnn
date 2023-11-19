@@ -13,6 +13,7 @@ train --config "configs/<config_name>.yaml"
 
 The [available config](configs) files currently are:
 - `aptos.yaml`
+- `ddr_aptos_lesions.yaml`
 
 ## Contributing
 To contribute to the project, run the following commands:
