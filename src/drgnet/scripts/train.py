@@ -52,11 +52,15 @@ def main():
             which_features=config.dataset.which_features, feature_layer=config.dataset.feature_layer
         )
 
-    train_dataset = DDR(root=config.dataset.root_ddr, transform=transform, mode=config.tag, variant="train", **kwargs)
-    valid_dataset = DDR(root=config.dataset.root_ddr, transform=transform, mode=config.tag, variant="valid", **kwargs)
-    test_dataset_ddr = DDR(root=config.dataset.root_ddr, transform=transform, mode=config.tag, variant="test", **kwargs)
-
-    test_dataset_aptos = Aptos(root=config.dataset.root_aptos, transform=transform, mode=config.tag, **kwargs)
+    if config.dataset.root_ddr is None:
+        dataset = Aptos(root=config.dataset.root_aptos, transform=transform, mode=config.tag, **kwargs)
+        train_dataset, valid_dataset = dataset.split(config.dataset.train_split, shuffle=True)
+        test_dataset_ddr = test_dataset_aptos = None
+    else:
+        train_dataset = DDR(root=config.dataset.root_ddr, transform=transform, mode=config.tag, variant="train", **kwargs)
+        valid_dataset = DDR(root=config.dataset.root_ddr, transform=transform, mode=config.tag, variant="valid", **kwargs)
+        test_dataset_ddr = DDR(root=config.dataset.root_ddr, transform=transform, mode=config.tag, variant="test", **kwargs)
+        test_dataset_aptos = Aptos(root=config.dataset.root_aptos, transform=transform, mode=config.tag, **kwargs)
 
     train_loader = DataLoader(
         train_dataset,
@@ -67,8 +71,10 @@ def main():
         pin_memory=True,
     )
     val_loader = DataLoader(valid_dataset, batch_size=config.batch_size, shuffle=False, num_workers=4)
-    test_loader_ddr = DataLoader(test_dataset_ddr, batch_size=config.batch_size, shuffle=False, num_workers=4)
-    test_loader_aptos = DataLoader(test_dataset_aptos, batch_size=config.batch_size, shuffle=False, num_workers=4)
+    
+    if test_dataset_aptos and test_dataset_ddr:
+        test_loader_ddr = DataLoader(test_dataset_ddr, batch_size=config.batch_size, shuffle=False, num_workers=4)
+        test_loader_aptos = DataLoader(test_dataset_aptos, batch_size=config.batch_size, shuffle=False, num_workers=4)
 
     # Model
     model = DRGNetLightning(
@@ -95,8 +101,9 @@ def main():
         ],
     )
     trainer.fit(model, train_loader, val_loader)
-    trainer.test(model, test_loader_aptos, ckpt_path="best")
-    trainer.test(model, test_loader_ddr, ckpt_path="best")
+    if test_dataset_ddr and test_dataset_aptos:
+        trainer.test(model, test_loader_aptos, ckpt_path="best")
+        trainer.test(model, test_loader_ddr, ckpt_path="best")
 
 
 
