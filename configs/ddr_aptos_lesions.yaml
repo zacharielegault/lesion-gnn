@@ -1,0 +1,21 @@
+dataset:
+  name: aptos-ddr
+  root_aptos: data/aptos
+  root_ddr: data/DDR
+  split: [0.8, 0.2]
+  which_features: encoder
+  feature_layer: 4
+  distance_sigma_px: 25
+  
+model:
+  gnn_hidden_dim: 64
+  num_layers: 6
+  sortpool_k: 50
+  conv_hidden_dims: [128, 64]
+  compile: false
+batch_size: 2500
+max_epochs: 500
+seed: 42
+
+project_name: Aptos-GNN
+tag: LESIONS
