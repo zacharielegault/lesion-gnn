@@ -42,4 +42,5 @@ class ModelConfig(BaseModel):
     compile: bool
     lr: Optional[float] = 0.001
     weight_decay: Optional[float] = 0.01
-    optimizer_algo: Optional[str] = "adamw" 
+    optimizer_algo: Optional[str] = "adamw"
+    loss_type: Optional[str] = "CE"

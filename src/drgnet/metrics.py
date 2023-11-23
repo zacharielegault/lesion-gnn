@@ -17,12 +17,16 @@ class ReferableDRMetric(Metric):
         self.add_state("y_true", default=[], dist_reduce_fx="cat")
 
     def update(self, logits: Tensor, target: Tensor) -> None:
-        multiclass_probs = torch.softmax(logits, dim=-1)
-        binary_probs = multiclass_probs[:, 2:].sum(dim=-1)
-        binary_target = target >= 2
+        if logits.shape == target.shape:
+            self.y_pred.append(logits >= 2)
+            self.y_true.append(target >= 2)
+        else:
+            multiclass_probs = torch.softmax(logits, dim=-1)
+            binary_probs = multiclass_probs[:, 2:].sum(dim=-1)
+            binary_target = target >= 2
 
-        self.y_pred.append(binary_probs)
-        self.y_true.append(binary_target)
+            self.y_pred.append(binary_probs)
+            self.y_true.append(binary_target)
 
 
 class ReferableDRAccuracy(ReferableDRMetric):

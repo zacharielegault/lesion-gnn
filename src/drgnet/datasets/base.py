@@ -9,6 +9,8 @@ import torch
 import torch.nn.functional as F
 from torch.cuda import is_available as cuda_is_available
 from torch_geometric.data import Data, InMemoryDataset
+from torch_geometric.data.dataset import _get_flattened_data_list
+from torch_geometric.utils import scatter
 from tqdm import tqdm
 
 
@@ -30,7 +32,7 @@ class BaseDataset(InMemoryDataset):
         transform: Callable[..., Any] | None = None,
         log: bool = True,
         num_workers: int = 0,
-        mode="SIFT",
+        mode: Literal["SIFT", "LESIONS"] = "SIFT",
         **pre_transform_kwargs: SIFTArgs | LESIONSArgs,
     ):
         assert num_workers >= 0
@@ -80,6 +82,30 @@ class BaseDataset(InMemoryDataset):
     def _diagnosis(self) -> Any:
         raise NotImplementedError("Please implement this property in your subclass.")
 
+    @property
+    def classes_counts(self) -> torch.Tensor:
+        data_list = _get_flattened_data_list([data for data in self])
+        y = torch.cat([data.y for data in data_list if "y" in data], dim=0)
+        _, counts = torch.unique(y, return_counts=True)
+        return counts
+
+    def get_class_weights(
+        self, mode: Literal["uniform", "inverse", "quadratic_inverse", "inverse_frequency"] = "inverse_frequency"
+    ) -> torch.Tensor:
+        counts = self.classes_counts
+        if mode == "uniform":
+            return torch.ones_like(counts)
+        elif mode == "inverse":
+            return 1 / counts
+        elif mode == "quadratic_inverse":
+            return 1 / counts**2
+        elif mode == "inverse_frequency":
+            n_samples = counts.sum()
+            n_classes = len(counts)
+            return n_samples / (n_classes * counts)
+        else:
+            raise ValueError(f"Invalid mode: {mode}")
+
     def process(self) -> None:
         """Process raw data and save it into the `processed_dir`."""
 
@@ -87,6 +113,8 @@ class BaseDataset(InMemoryDataset):
 
         if self.num_workers == 0:
             for path, label in tqdm(self._path_and_label_generator(), total=len(self._diagnosis)):
+                if label > 4:
+                    continue
                 data = self.pre_transform(path, label)
                 graphs.append(data)
         else:
@@ -150,36 +178,25 @@ class _SiftTransform:
         return f"{self.__class__.__name__}(num_keypoints={self.num_keypoints}, sigma={self.sigma})"
 
 
-def _extract_features_by_cc(cc, features, nlabel):
-    if nlabel == 1:
-        return features.mean((2, 3))
-    cctorch = torch.nn.functional.one_hot(cc, num_classes=nlabel).squeeze().permute(2, 0, 1)
-    cctorch_flat = cctorch.flatten(1, 2)
-    cctorch_sum = cctorch_flat.sum(dim=1, keepdim=True)
-    cctorch_sparse = cctorch_flat.float().to_sparse()
+# def extract_features_by_cc(cc, features, nlabel, reduce=None):
+#     if nlabel == 1:
+#         return features.mean((2, 3))
+#     cctorch = torch.nn.functional.one_hot(cc, num_classes=nlabel).squeeze().permute(2, 0, 1)
+#     cctorch_flat = cctorch.flatten(1, 2)
+#     cctorch_sum = cctorch_flat.sum(dim=1, keepdim=True)
+#     cctorch_sparse = cctorch_flat.float().to_sparse()
 
-    features_flat = features.squeeze().flatten(1, 2).transpose(0, 1)
-    features_points = torch.sparse.mm(cctorch_sparse, features_flat) / cctorch_sum
-    return features_points
+#     features_flat = features.squeeze().flatten(1, 2).transpose(0, 1)
+#     features_points = torch.sparse.mm(cctorch_sparse, features_flat) / cctorch_sum
+#     return features_points
 
 
 def extract_features_by_cc(cc, features, nlabel, reduce="mean"):
-    """
-    Args:
-        cc: connected components tensor (H, W)
-        features: features tensor (1, C, H, W)
-        nlabel: number of connected components (int)
-    """
     if nlabel == 1:
         return features.mean((2, 3))
     features = features.squeeze(0).flatten(1, 2)  # (C, H*W)
-    features_points = torch.zeros(
-        (nlabel, features.shape[0]), device=features.device, dtype=features.dtype
-    )  # (nlabel, C)
-
     features = features.transpose(0, 1)  # (H*W, C)
-    features_points.scatter_reduce_(0, cc, features, reduce=reduce)
-    return features_points
+    return scatter(features, cc.flatten(), 0, reduce=reduce)
 
 
 class _LesionsTransform:
@@ -188,7 +205,7 @@ class _LesionsTransform:
         which_features: Literal["decoder", "encoder"] = "encoder",
         feature_layer: int = 3,
         features_reduction: Literal["mean", "max"] = "mean",
-        compile=False,
+        compile=True,
     ):
         assert which_features in [
             "decoder",
@@ -233,7 +250,7 @@ class _LesionsTransform:
             features = F.interpolate(features, size=(512, 512), mode="bilinear", align_corners=False)
             # 1536x1536  was just too big -> 512x512
 
-        Horg, Worg = labelMap.shape[:2]
+        Horg, Worg = labelMap.shape[-2:]
         # Open question: should we match (downsample) image resolution with features resolution or the reverse
         # (upsample features resolution)?
 

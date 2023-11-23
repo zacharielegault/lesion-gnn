@@ -64,6 +64,8 @@ class DDR(BaseDataset):
 
     def _path_and_label_generator(self) -> Iterator[Tuple[Path, int]]:
         for row in self._diagnosis.itertuples():
-            path = Path(self.ro) / self.variant / row.filename
+            path = Path(self.root) / self.variant / row.filename
             label = row.diagnosis
+            if label > 4:
+                continue
             yield path, label

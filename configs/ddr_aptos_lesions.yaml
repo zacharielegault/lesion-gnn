@@ -5,15 +5,20 @@ dataset:
   split: [0.8, 0.2]
   which_features: encoder
   feature_layer: 4
-  distance_sigma_px: 25
-  
+  distance_sigma_px: 22
+
 model:
-  gnn_hidden_dim: 64
-  num_layers: 6
-  sortpool_k: 50
-  conv_hidden_dims: [128, 64]
+  gnn_hidden_dim: 110
+  num_layers: 4
+  sortpool_k: 56
+  conv_hidden_dims: [64, 64]
   compile: false
-batch_size: 2500
+  lr: 0.01
+  optimizer_algo: adamw
+  loss_type: CE
+  weight_decay: 0.05
+
+batch_size: 5000
 max_epochs: 500
 seed: 42
 

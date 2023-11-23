@@ -1,6 +1,6 @@
 program: src/drgnet/scripts/train_sweep.py
 method: bayes
-metric: 
+metric:
   name: val_kappa
   goal: maximize
 parameters:
@@ -28,7 +28,7 @@ parameters:
     min: 5.0
     max: 100.0
     distribution: uniform
-    
+
 early_terminate:
   type: hyperband
   min_iter: 5
@@ -38,4 +38,3 @@ command:
   - "--config"
   - "configs/ddr_aptos_lesions.yaml"
   - ${args}
-

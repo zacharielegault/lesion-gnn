@@ -91,27 +91,44 @@ class DRGNetLightning(L.LightningModule):
         lr: float = 0.001,
         weight_decay: float = 0.01,
         optimizer_algo: Literal["adam", "adamw", "sgd"] = "adamw",
+        loss_type: Literal["MSE", "CE", "SmoothL1"] = "CE",
+        weights: torch.Tensor | None = None,
     ) -> None:
         super().__init__()
+
+        self.loss_type = loss_type
+        _virtual_n_classes = num_classes
+        
+        match loss_type:
+            case "MSE":
+                self.criterion = nn.MSELoss()
+                _virtual_n_classes = 1
+            case "SmoothL1":
+                self.criterion = nn.SmoothL1Loss()
+            case "CE":
+                self.criterion = nn.CrossEntropyLoss(weight=weights)
+            case other:
+                raise ValueError(f"Invalid loss type: {other}")
+                
+        
         model = DRGNet(
             input_features=input_features,
             gnn_hidden_dim=gnn_hidden_dim,
             num_layers=num_layers,
             sortpool_k=sortpool_k,
-            num_classes=num_classes,
+            num_classes=_virtual_n_classes,
             conv_hidden_dims=conv_hidden_dims,
         )
         self.model = torch_geometric.compile(model, dynamic=True) if compile else model
-        self.criterion = nn.CrossEntropyLoss()
 
         self.num_classes = num_classes
         self.lr = lr
         self.weight_decay = weight_decay
         self.optimizer_algo = optimizer_algo
 
-        self.setup_metric()
+        self.setup_metric(probabilistic_predictions= loss_type == "CE")
 
-    def setup_metric(self):
+    def setup_metric(self, probabilistic_predictions: bool = True) -> None:
         self.multiclass_metrics = MetricCollection(
             {
                 "micro_acc": Accuracy(task="multiclass", num_classes=self.num_classes, average="micro"),
@@ -122,19 +139,19 @@ class DRGNetLightning(L.LightningModule):
             },
             prefix="val_",
         )
-
         self.referable_metrics = MetricCollection(
-            {
-                "acc": ReferableDRAccuracy(),
-                "auroc": ReferableDRAUROC(),
-                "auprc": ReferableDRAveragePrecision(),
-                "f1": ReferableDRF1(),
-                "precision": ReferableDRPrecision(),
-                "recall": ReferableDRRecall(),
-            },
-            prefix="val_referable_",
-        )
-
+                {
+                    "acc": ReferableDRAccuracy(),
+                    "f1": ReferableDRF1(),
+                    "precision": ReferableDRPrecision(),
+                    "recall": ReferableDRRecall(),
+                },
+                prefix="val_referable_",
+            )
+        
+        if probabilistic_predictions:
+            self.referable_metrics.add_metrics({"auroc": ReferableDRAUROC(), "auprc": ReferableDRAveragePrecision()})
+            
         self.aptos_multiclass_metrics = self.multiclass_metrics.clone(prefix="test_aptos_")
         self.ddr_multiclass_metrics = self.multiclass_metrics.clone(prefix="test_ddr_")
 
@@ -144,7 +161,11 @@ class DRGNetLightning(L.LightningModule):
     def forward(
         self, x: Tensor, edge_index: Tensor | SparseTensor, batch: Tensor, edge_weight: Tensor | None = None
     ) -> Tensor:
-        return self.model(x, edge_index, batch, edge_weight)
+        logits = self.model(x, edge_index, batch, edge_weight)
+        
+        if self.loss_type in ["MSE", "SmoothL1"]:
+            logits = torch.clamp(logits.squeeze(1), min=0, max=self.num_classes - 1)
+        return logits
 
     def training_step(self, batch: Data, batch_idx: int) -> Tensor:
         if hasattr(batch, "adj_t"):
@@ -165,13 +186,22 @@ class DRGNetLightning(L.LightningModule):
 
         logits = self(batch.x, edge_index, batch.batch, batch.edge_weight)
         loss = self.criterion(logits, batch.y)
+        logits = self.logits_to_preds(logits)
+
         self.log("val_loss", loss, batch_size=batch.num_graphs)
+        
         self.log_dict(
             self.multiclass_metrics(logits, batch.y), batch_size=batch.num_graphs, on_step=False, on_epoch=True
         )
         self.log_dict(
             self.referable_metrics(logits, batch.y), batch_size=batch.num_graphs, on_step=False, on_epoch=True
         )
+    
+    def logits_to_preds(self, logits: Tensor) -> Tensor:
+        if self.loss_type == "CE":
+            return logits
+        elif self.loss_type in ["MSE", "SmoothL1"]:
+            return torch.round(logits).long()
 
     def test_step(self, batch: Data, batch_idx: int) -> None:
         if hasattr(batch, "adj_t"):
@@ -180,6 +210,7 @@ class DRGNetLightning(L.LightningModule):
             edge_index = batch.edge_index
 
         logits = self(batch.x, edge_index, batch.batch, batch.edge_weight)
+        logits = self.logits_to_preds(logits)
         dataset_name = self.trainer.test_dataloaders.dataset.dataset_name
         if dataset_name == "Aptos":
             multiclass_metric = self.aptos_multiclass_metrics
@@ -190,14 +221,16 @@ class DRGNetLightning(L.LightningModule):
 
         self.log_dict(multiclass_metric(logits, batch.y), batch_size=batch.num_graphs, on_step=False, on_epoch=True)
         self.log_dict(referable_metric(logits, batch.y), batch_size=batch.num_graphs, on_step=False, on_epoch=True)
-        return torch.argmax(logits, dim=1), batch.y
-
+        if self.loss_type == "CE":
+            return torch.argmax(logits, dim=1), batch.y
+        else:
+            return logits, batch.y
+        
     def configure_optimizers(self) -> torch.optim.Optimizer:
         match self.optimizer_algo:
             case "adam":
                 return torch.optim.Adam(self.parameters(), lr=self.lr, weight_decay=self.weight_decay)
-            case "adamw":      
+            case "adamw":
                 return torch.optim.AdamW(self.parameters(), lr=self.lr, weight_decay=self.weight_decay)
             case "sgd":
                 return torch.optim.SGD(self.parameters(), lr=self.lr, weight_decay=self.weight_decay)
-            
