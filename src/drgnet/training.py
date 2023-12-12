@@ -6,7 +6,7 @@ from torch_geometric.transforms import Compose, RadiusGraph, ToSparseTensor
 
 import wandb
 from drgnet.callbacks import ConfusionMatrixCallback
-from drgnet.datasets import DDR, Aptos, LESIONSArgs, SIFTArgs
+from drgnet.datasets import DDR, Aptos, LesionsArgs, SiftArgs
 from drgnet.model import DRGNetLightning
 from drgnet.transforms import GaussianDistance
 
@@ -34,9 +34,9 @@ def train(config):
         transform.transforms.append(ToSparseTensor())
 
     if config.tag.lower() == "sift":
-        kwargs = SIFTArgs(num_keypoints=config.dataset.num_keypoints, sigma=config.dataset.sift_sigma)
+        kwargs = SiftArgs(num_keypoints=config.dataset.num_keypoints, sigma=config.dataset.sift_sigma)
     elif config.tag.lower() == "lesions":
-        kwargs = LESIONSArgs(
+        kwargs = LesionsArgs(
             which_features=config.dataset.which_features,
             feature_layer=config.dataset.feature_layer,
             features_reduction=config.dataset.features_reduction,

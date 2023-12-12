@@ -1,5 +1,6 @@
 from .aptos import Aptos
-from .base import LESIONSArgs, SIFTArgs
 from .ddr import DDR
+from .nodes.lesions import LesionsArgs
+from .nodes.sift import SiftArgs
 
-__all__ = ["Aptos", "DDR", "SIFTArgs", "LESIONSArgs"]
+__all__ = ["Aptos", "DDR", "SiftArgs", "LesionsArgs"]

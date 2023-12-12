@@ -3,7 +3,7 @@ from typing import Any, Callable, Iterator, List, Literal, Tuple
 
 import pandas as pd
 
-from .base import BaseDataset, LESIONSArgs, SIFTArgs
+from .base import BaseDataset, LesionsArgs, SiftArgs
 
 
 class DDR(BaseDataset):
@@ -50,7 +50,7 @@ class DDR(BaseDataset):
     def __init__(
         self,
         *,
-        pre_transform_kwargs: SIFTArgs | LESIONSArgs,
+        pre_transform_kwargs: SiftArgs | LesionsArgs,
         root: str | None = None,
         transform: Callable[..., Any] | None = None,
         log: bool = True,
