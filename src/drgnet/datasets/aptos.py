@@ -1,4 +1,3 @@
-from functools import cached_property
 from itertools import pairwise
 from pathlib import Path
 from typing import Iterator, List, Tuple
@@ -24,9 +23,6 @@ class Aptos(BaseDataset):
             │       └── ffec9a18a3ce.png
             └── train.csv
     """
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
 
     @property
     def raw_file_names(self) -> List[str]:
