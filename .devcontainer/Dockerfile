@@ -1,6 +1,6 @@
 FROM pytorch/pytorch:2.1.0-cuda12.1-cudnn8-devel
 
-# Install PyG with appropriate PyTorch and CUDA versions to match the base image (2.0.0 and 11.7 respectively)
+# Install PyG with appropriate PyTorch and CUDA versions to match the base image
 RUN pip install pyg_lib==0.3.0 \
     torch_scatter==2.1.2 \
     torch_sparse==0.6.18 \
