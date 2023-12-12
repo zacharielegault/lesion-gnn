@@ -34,36 +34,40 @@ def train(config):
         transform.transforms.append(ToSparseTensor())
 
     if config.tag.lower() == "sift":
-        kwargs: SIFTArgs = dict(num_keypoints=config.dataset.num_keypoints, sigma=config.dataset.sift_sigma)
+        kwargs = SIFTArgs(num_keypoints=config.dataset.num_keypoints, sigma=config.dataset.sift_sigma)
     elif config.tag.lower() == "lesions":
-        kwargs: LESIONSArgs = dict(
-            which_features=config.dataset.which_features, feature_layer=config.dataset.feature_layer
+        kwargs = LESIONSArgs(
+            which_features=config.dataset.which_features,
+            feature_layer=config.dataset.feature_layer,
+            features_reduction=config.dataset.features_reduction,
+            reinterpolation=config.dataset.reinterpolation,
         )
+    else:
+        raise ValueError(f"Unknown tag {config.tag}")
 
     if config.dataset.root_ddr is None:
-        dataset = Aptos(root=config.dataset.root_aptos, transform=transform, mode=config.tag, **kwargs)
+        dataset = Aptos(root=config.dataset.root_aptos, transform=transform, pre_transform_kwargs=kwargs)
         train_dataset, valid_dataset = dataset.split(config.dataset.train_split, shuffle=True)
         test_dataset_ddr = test_dataset_aptos = None
     else:
         train_dataset = DDR(
             root=config.dataset.root_ddr,
             transform=transform,
-            mode=config.tag,
             variant="train",
-            **kwargs,
+            pre_transform_kwargs=kwargs,
         )
         train_dataset = train_dataset.index_select([i for i, d in enumerate(train_dataset) if d.y < 5])
         valid_dataset = DDR(
-            root=config.dataset.root_ddr, transform=transform, mode=config.tag, variant="valid", **kwargs
+            root=config.dataset.root_ddr, transform=transform, variant="valid", pre_transform_kwargs=kwargs
         )
         valid_dataset = valid_dataset.index_select([i for i, d in enumerate(valid_dataset) if d.y < 5])
 
         test_dataset_ddr = DDR(
-            root=config.dataset.root_ddr, transform=transform, mode=config.tag, variant="test", **kwargs
+            root=config.dataset.root_ddr, transform=transform, variant="test", pre_transform_kwargs=kwargs
         )
         test_dataset_ddr = test_dataset_ddr.index_select([i for i, d in enumerate(test_dataset_ddr) if d.y < 5])
 
-        test_dataset_aptos = Aptos(root=config.dataset.root_aptos, transform=transform, mode=config.tag, **kwargs)
+        test_dataset_aptos = Aptos(root=config.dataset.root_aptos, transform=transform, pre_transform_kwargs=kwargs)
     train_dataset.num_classes
     train_loader = DataLoader(
         train_dataset,
@@ -93,7 +97,7 @@ def train(config):
         optimizer_algo=config.model.optimizer_algo,
         loss_type=config.model.loss_type,
         weight_decay=config.model.weight_decay,
-        weights=class_weights
+        weights=class_weights,
     )
 
     # Training

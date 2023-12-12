@@ -14,7 +14,10 @@ dependencies = [
     "torchmetrics",
     "tensorboard",
     "fundus_lesions_toolkit @ git+https://github.com/ClementPla/fundus-lesions-toolkit@main",
+    "nntools @ git+https://github.com/ClementPla/NNTools@attrs_dataset",
     "wandb",
+    "attrs",
+    "albumentations"
 ]
 readme = "README.md"
 

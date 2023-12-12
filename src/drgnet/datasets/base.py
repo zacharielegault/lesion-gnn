@@ -1,7 +1,8 @@
 import os.path as osp
 import warnings
+from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Callable, List, Literal, TypedDict
+from typing import Any, Callable, List, Literal, Optional, Tuple
 
 import cv2
 import numpy as np
@@ -14,37 +15,48 @@ from torch_geometric.utils import scatter
 from tqdm import tqdm
 
 
-class SIFTArgs(TypedDict):
+@dataclass
+class SIFTArgs:
     num_keypoints: int
     sigma: float
 
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
 
-class LESIONSArgs(TypedDict):
+
+@dataclass
+class LESIONSArgs:
     which_features: Literal["decoder", "encoder"]
     feature_layer: int
-    features_reduction: Literal["mean", "max"]
+    features_reduction: Literal["mean", "max"] = "mean"
+    reinterpolation: Optional[Tuple[int, int]] = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
 
 
 class BaseDataset(InMemoryDataset):
     def __init__(
         self,
-        root: str | None = None,
+        *,
+        root: str,
+        pre_transform_kwargs: SIFTArgs | LESIONSArgs,
         transform: Callable[..., Any] | None = None,
         log: bool = True,
         num_workers: int = 0,
-        mode: Literal["SIFT", "LESIONS"] = "SIFT",
-        **pre_transform_kwargs: SIFTArgs | LESIONSArgs,
     ):
         assert num_workers >= 0
-        assert mode in ["SIFT", "LESIONS"]
+        self.num_workers = num_workers
 
         self.pre_transform_kwargs = pre_transform_kwargs
-        self.num_workers = num_workers
-        self.mode = mode
-
-        pre_transform = (
-            _SiftTransform(**pre_transform_kwargs) if self.mode == "SIFT" else _LesionsTransform(**pre_transform_kwargs)
-        )
+        if isinstance(pre_transform_kwargs, SIFTArgs):
+            self.mode = "SIFT"
+            pre_transform = _SiftTransform(**pre_transform_kwargs.to_dict())
+        elif isinstance(pre_transform_kwargs, LESIONSArgs):
+            self.mode = "LESIONS"
+            pre_transform = _LesionsTransform(**pre_transform_kwargs.to_dict())
+        else:
+            raise ValueError(f"Invalid pre_transform_kwargs: {pre_transform_kwargs}")
 
         super().__init__(
             root=root,
@@ -64,12 +76,12 @@ class BaseDataset(InMemoryDataset):
     def processed_dir(self) -> str:
         if self.mode == "SIFT":
             return osp.join(
-                self.root, f'processed_{self.dataset_name}_{self.mode}_{self.pre_transform_kwargs["num_keypoints"]}'
+                self.root, f"processed_{self.dataset_name}_{self.mode}_{self.pre_transform_kwargs.num_keypoints}"
             )
         elif self.mode == "LESIONS":
             return osp.join(
                 self.root,
-                f'processed_{self.dataset_name}_{self.mode}_{self.pre_transform_kwargs["which_features"]}_{self.pre_transform_kwargs["feature_layer"]}',
+                f"processed_{self.dataset_name}_{self.mode}_{self.pre_transform_kwargs.which_features}_{self.pre_transform_kwargs.feature_layer}",
             )
         else:
             return super().processed_dir
@@ -206,6 +218,7 @@ class _LesionsTransform:
         feature_layer: int = 3,
         features_reduction: Literal["mean", "max"] = "mean",
         compile=True,
+        reinterpolation: Optional[Tuple[int, int]] = None,
     ):
         assert which_features in [
             "decoder",
@@ -215,6 +228,7 @@ class _LesionsTransform:
         self.feature_layer = feature_layer
         self.device = torch.device("cuda" if cuda_is_available() else "cpu")
         self.features_reduction = features_reduction
+        self.reinterpolation = reinterpolation
         if compile:
             # Does not seem to be faster and mode="reduced overhead" crashes after a few iterations
             self.extract_features_by_cc = torch.compile(extract_features_by_cc)
@@ -245,18 +259,14 @@ class _LesionsTransform:
 
         elif self.which_features == "encoder":
             features = fmap
+        # features = features.cpu()
+        if self.reinterpolation is not None:
+            features = F.interpolate(features, size=self.reinterpolation, mode="bilinear", align_corners=False)
 
-        if features.shape[2] > 512:
-            features = F.interpolate(features, size=(512, 512), mode="bilinear", align_corners=False)
-            # 1536x1536  was just too big -> 512x512
-
-        Horg, Worg = labelMap.shape[-2:]
-        # Open question: should we match (downsample) image resolution with features resolution or the reverse
-        # (upsample features resolution)?
-
-        # Using former for now (more efficient memory wise)
         labelMap = F.adaptive_max_pool2d(labelMap, output_size=features.shape[2:])
         # Using max_pool to avoid losing lesions with interpolation (good practice?)
+        labelMap = labelMap.to(features.device)
+        Horg, Worg = labelMap.shape[-2:]
 
         predMapTensor = torch.argmax(labelMap, dim=1, keepdim=True)
         predMap = predMapTensor.squeeze().detach().byte().cpu().numpy()

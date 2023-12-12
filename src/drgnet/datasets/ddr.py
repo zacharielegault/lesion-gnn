@@ -1,4 +1,3 @@
-from functools import cached_property
 from pathlib import Path
 from typing import Any, Callable, Iterator, List, Literal, Tuple
 
@@ -40,7 +39,7 @@ class DDR(BaseDataset):
     @property
     def _diagnosis(self) -> pd.DataFrame:
         df = pd.read_table(
-            Path(self.root) / self.raw_file_names[0], header=None, delimiter=" ", names=["filename", "diagnosis"]
+            Path(self.raw_dir) / self.raw_file_names[0], header=None, delimiter=" ", names=["filename", "diagnosis"]
         )
         return df
 
@@ -50,21 +49,23 @@ class DDR(BaseDataset):
 
     def __init__(
         self,
+        *,
+        pre_transform_kwargs: SIFTArgs | LESIONSArgs,
         root: str | None = None,
         transform: Callable[..., Any] | None = None,
         log: bool = True,
         num_workers: int = 0,
-        mode="SIFT",
         variant: Literal["train", "valid", "test"] = "train",
-        **pre_transform_kwargs: SIFTArgs | LESIONSArgs,
     ):
         assert variant in ["train", "valid", "test"]
         self.variant = variant
-        super().__init__(root, transform, log, num_workers, mode, **pre_transform_kwargs)
+        super().__init__(
+            root=root, pre_transform_kwargs=pre_transform_kwargs, transform=transform, log=log, num_workers=num_workers
+        )
 
     def _path_and_label_generator(self) -> Iterator[Tuple[Path, int]]:
         for row in self._diagnosis.itertuples():
-            path = Path(self.root) / self.variant / row.filename
+            path = Path(self.raw_dir) / self.variant / row.filename
             label = row.diagnosis
             if label > 4:
                 continue

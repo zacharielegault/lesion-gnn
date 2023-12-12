@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Tuple
 
 import yaml
 from pydantic import BaseModel
@@ -32,13 +32,14 @@ class DatasetConfig(BaseModel):
     which_features: Optional[str] = None
     feature_layer: Optional[int] = None
     features_reduction: Optional[str] = "mean"
+    reinterpolation: Optional[Tuple[int, int]] = None
 
 
 class ModelConfig(BaseModel):
     gnn_hidden_dim: int
     num_layers: int
     sortpool_k: int
-    conv_hidden_dims: tuple[int, int]
+    conv_hidden_dims: Tuple[int, int]
     compile: bool
     lr: Optional[float] = 0.001
     weight_decay: Optional[float] = 0.01

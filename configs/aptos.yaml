@@ -1,17 +1,18 @@
 dataset:
   name: aptos
   root_aptos: data/aptos
+  root_ddr: data/DDR
   split: [0.8, 0.2]
   num_keypoints: 50
   sift_sigma: 1.6
-  distance_sigma_px: 10
+  distance_sigma_px: 60
 model:
   gnn_hidden_dim: 32
   num_layers: 4
   sortpool_k: 50
   conv_hidden_dims: [16, 32]
   compile: false
-batch_size: 64
+batch_size: 5000
 max_epochs: 210
 seed: 42
 project_name: Aptos-GNN

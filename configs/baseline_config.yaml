@@ -2,17 +2,10 @@ dataset:
   name: aptos-ddr
   root_aptos: data/aptos
   root_ddr: data/DDR
-  split: [0.8, 0.2]
-  which_features: encoder
-  feature_layer: 5
-  distance_sigma_px: 22
-  reinterpolation: [512, 512]
-
+  img_size: 224
+  
 model:
-  gnn_hidden_dim: 110
-  num_layers: 4
-  sortpool_k: 56
-  conv_hidden_dims: [64, 64]
+  model_name: 'resnet34'
   compile: false
   lr: 0.01
   optimizer_algo: adamw
@@ -24,4 +17,4 @@ max_epochs: 500
 seed: 42
 
 project_name: Aptos-GNN
-tag: LESIONS
+tag: BASELINE

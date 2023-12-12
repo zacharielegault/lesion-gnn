@@ -1,7 +1,6 @@
 from itertools import pairwise
 from typing import Literal
 
-import lightning as L
 import torch
 import torch.nn.functional as F
 import torch_geometric
@@ -9,17 +8,8 @@ from torch import Tensor, nn
 from torch_geometric.data import Data
 from torch_geometric.nn import MLP, GraphConv, SortAggregation
 from torch_sparse import SparseTensor
-from torchmetrics import MetricCollection
-from torchmetrics.classification import Accuracy, CohenKappa, F1Score, Precision, Recall
 
-from drgnet.metrics import (
-    ReferableDRAccuracy,
-    ReferableDRAUROC,
-    ReferableDRAveragePrecision,
-    ReferableDRF1,
-    ReferableDRPrecision,
-    ReferableDRRecall,
-)
+from drgnet.base_model import BaseModel
 
 
 class DRGNet(nn.Module):
@@ -78,7 +68,7 @@ class DRGNet(nn.Module):
         return logits
 
 
-class DRGNetLightning(L.LightningModule):
+class DRGNetLightning(BaseModel):
     def __init__(
         self,
         input_features: int,
@@ -94,76 +84,31 @@ class DRGNetLightning(L.LightningModule):
         loss_type: Literal["MSE", "CE", "SmoothL1"] = "CE",
         weights: torch.Tensor | None = None,
     ) -> None:
-        super().__init__()
+        super().__init__(
+            lr=lr,
+            weights=weights,
+            num_classes=num_classes,
+            weight_decay=weight_decay,
+            optimizer_algo=optimizer_algo,
+            loss_type=loss_type,
+        )
 
-        self.loss_type = loss_type
-        _virtual_n_classes = num_classes
-        
-        match loss_type:
-            case "MSE":
-                self.criterion = nn.MSELoss()
-                _virtual_n_classes = 1
-            case "SmoothL1":
-                self.criterion = nn.SmoothL1Loss()
-            case "CE":
-                self.criterion = nn.CrossEntropyLoss(weight=weights)
-            case other:
-                raise ValueError(f"Invalid loss type: {other}")
-                
-        
         model = DRGNet(
             input_features=input_features,
             gnn_hidden_dim=gnn_hidden_dim,
             num_layers=num_layers,
             sortpool_k=sortpool_k,
-            num_classes=_virtual_n_classes,
+            num_classes=1 if self.is_regression else num_classes,
             conv_hidden_dims=conv_hidden_dims,
         )
         self.model = torch_geometric.compile(model, dynamic=True) if compile else model
-
-        self.num_classes = num_classes
-        self.lr = lr
-        self.weight_decay = weight_decay
-        self.optimizer_algo = optimizer_algo
-
-        self.setup_metric(probabilistic_predictions= loss_type == "CE")
-
-    def setup_metric(self, probabilistic_predictions: bool = True) -> None:
-        self.multiclass_metrics = MetricCollection(
-            {
-                "micro_acc": Accuracy(task="multiclass", num_classes=self.num_classes, average="micro"),
-                "kappa": CohenKappa(task="multiclass", num_classes=self.num_classes, weights="quadratic"),
-                "macro_f1": F1Score(task="multiclass", num_classes=self.num_classes, average="macro"),
-                "macro_precision": Precision(task="multiclass", num_classes=self.num_classes, average="macro"),
-                "macro_recall": Recall(task="multiclass", num_classes=self.num_classes, average="macro"),
-            },
-            prefix="val_",
-        )
-        self.referable_metrics = MetricCollection(
-                {
-                    "acc": ReferableDRAccuracy(),
-                    "f1": ReferableDRF1(),
-                    "precision": ReferableDRPrecision(),
-                    "recall": ReferableDRRecall(),
-                },
-                prefix="val_referable_",
-            )
-        
-        if probabilistic_predictions:
-            self.referable_metrics.add_metrics({"auroc": ReferableDRAUROC(), "auprc": ReferableDRAveragePrecision()})
-            
-        self.aptos_multiclass_metrics = self.multiclass_metrics.clone(prefix="test_aptos_")
-        self.ddr_multiclass_metrics = self.multiclass_metrics.clone(prefix="test_ddr_")
-
-        self.aptos_referable_metrics = self.referable_metrics.clone(prefix="test_referable_aptos_")
-        self.ddr_referable_metrics = self.referable_metrics.clone(prefix="test_referable_ddr_")
 
     def forward(
         self, x: Tensor, edge_index: Tensor | SparseTensor, batch: Tensor, edge_weight: Tensor | None = None
     ) -> Tensor:
         logits = self.model(x, edge_index, batch, edge_weight)
-        
-        if self.loss_type in ["MSE", "SmoothL1"]:
+
+        if self.is_regression:
             logits = torch.clamp(logits.squeeze(1), min=0, max=self.num_classes - 1)
         return logits
 
@@ -189,19 +134,13 @@ class DRGNetLightning(L.LightningModule):
         logits = self.logits_to_preds(logits)
 
         self.log("val_loss", loss, batch_size=batch.num_graphs)
-        
+
         self.log_dict(
             self.multiclass_metrics(logits, batch.y), batch_size=batch.num_graphs, on_step=False, on_epoch=True
         )
         self.log_dict(
             self.referable_metrics(logits, batch.y), batch_size=batch.num_graphs, on_step=False, on_epoch=True
         )
-    
-    def logits_to_preds(self, logits: Tensor) -> Tensor:
-        if self.loss_type == "CE":
-            return logits
-        elif self.loss_type in ["MSE", "SmoothL1"]:
-            return torch.round(logits).long()
 
     def test_step(self, batch: Data, batch_idx: int) -> None:
         if hasattr(batch, "adj_t"):
@@ -221,16 +160,7 @@ class DRGNetLightning(L.LightningModule):
 
         self.log_dict(multiclass_metric(logits, batch.y), batch_size=batch.num_graphs, on_step=False, on_epoch=True)
         self.log_dict(referable_metric(logits, batch.y), batch_size=batch.num_graphs, on_step=False, on_epoch=True)
-        if self.loss_type == "CE":
+        if not self.is_regression:
             return torch.argmax(logits, dim=1), batch.y
         else:
             return logits, batch.y
-        
-    def configure_optimizers(self) -> torch.optim.Optimizer:
-        match self.optimizer_algo:
-            case "adam":
-                return torch.optim.Adam(self.parameters(), lr=self.lr, weight_decay=self.weight_decay)
-            case "adamw":
-                return torch.optim.AdamW(self.parameters(), lr=self.lr, weight_decay=self.weight_decay)
-            case "sgd":
-                return torch.optim.SGD(self.parameters(), lr=self.lr, weight_decay=self.weight_decay)
