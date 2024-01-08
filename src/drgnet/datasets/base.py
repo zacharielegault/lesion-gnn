@@ -49,14 +49,13 @@ class BaseDataset(InMemoryDataset):
 
     @property
     def processed_dir(self) -> str:
+        path = osp.join(self.root, "processed", f"{self.dataset_name}", self.mode)
         if self.mode == "SIFT":
-            return osp.join(
-                self.root, f"processed_{self.dataset_name}_{self.mode}_{self.pre_transform_kwargs.num_keypoints}"
-            )
+            return osp.join(path, f"{self.pre_transform_kwargs.num_keypoints}")
         elif self.mode == "LESIONS":
             return osp.join(
-                self.root,
-                f"processed_{self.dataset_name}_{self.mode}_{self.pre_transform_kwargs.which_features}_{self.pre_transform_kwargs.feature_layer}",
+                path,
+                f"{self.pre_transform_kwargs.which_features}_{self.pre_transform_kwargs.feature_layer}",
             )
         else:
             return super().processed_dir
