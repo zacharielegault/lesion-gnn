@@ -14,14 +14,6 @@ from drgnet.transforms import GaussianDistance
 def train(config):
     print(config)
     L.seed_everything(config.seed)
-    logger = WandbLogger(
-        project=config.project_name,
-        settings=wandb.Settings(code_dir="."),
-        entity="liv4d-polytechnique",
-        tags=[config.tag],
-        config=config.model_dump(),
-    )
-    run_name = logger.experiment.name
 
     # Dataset
     transform = Compose(
@@ -99,6 +91,17 @@ def train(config):
         weight_decay=config.model.weight_decay,
         weights=class_weights,
     )
+    logged_args = config.model_dump()
+    logged_args["input_features"] = train_dataset.num_features
+
+    logger = WandbLogger(
+        project=config.project_name,
+        settings=wandb.Settings(code_dir="."),
+        entity="liv4d-polytechnique",
+        tags=[config.tag],
+        config=logged_args,
+    )
+    run_name = logger.experiment.name
 
     # Training
     trainer = L.Trainer(
