@@ -95,16 +95,16 @@ class LesionsExtractor:
         if self.reinterpolation is not None:
             features = F.interpolate(features, size=self.reinterpolation, mode="bilinear", align_corners=False)
 
-        labelMap = F.adaptive_max_pool2d(labelMap, output_size=features.shape[2:])
+        labelMap = torch.argmax(labelMap, dim=1, keepdim=True)
+        Horg, Worg = labelMap.shape[-2:]
+        labelMap = F.adaptive_max_pool2d(labelMap.float(), output_size=features.shape[2:])
+        connectedMap = labelMap.squeeze().detach().byte().cpu().numpy()
+
+        H, W = labelMap.shape[-2:]
         # Using max_pool to avoid losing lesions with interpolation (good practice?)
         labelMap = labelMap.to(features.device)
-        Horg, Worg = labelMap.shape[-2:]
-
-        predMapTensor = torch.argmax(labelMap, dim=1, keepdim=True)
-        predMap = predMapTensor.squeeze().detach().byte().cpu().numpy()
-        H, W = predMap.shape
         nlabel, cc, stats, centroids = cv2.connectedComponentsWithStatsWithAlgorithm(
-            predMap, connectivity=8, ltype=cv2.CV_16U, ccltype=1
+            connectedMap, connectivity=8, ltype=cv2.CV_16U, ccltype=1
         )
         ## Few remarks on connectedComponentsWithStatsWithAlgorithm ##
         # It does not support ltype=cv2.CV_16 unfortunately (casting needed to convert to tensor)
@@ -114,7 +114,7 @@ class LesionsExtractor:
         # centroids are computed on the downsampled image, we rescale them (is it needed?)
         centroids = centroids * Horg / H
 
-        features = torch.cat([features, predMapTensor], dim=1)  # We add the predicted lesion class to the point feature
+        features = torch.cat([features, labelMap], dim=1)  # We add the predicted lesion class to the point feature
 
         cctorch = torch.from_numpy(cc.astype(np.int64)).to(self.device)
         features_points = self.extract_features_by_cc(cctorch, features, nlabel, reduce=self.features_reduction)
