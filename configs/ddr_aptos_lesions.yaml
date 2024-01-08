@@ -4,22 +4,22 @@ dataset:
   root_ddr: data/DDR
   split: [0.8, 0.2]
   which_features: encoder
-  feature_layer: 5
-  distance_sigma_px: 22
+  feature_layer: 4
+  distance_sigma_px: 8
   reinterpolation: [512, 512]
 
 model:
-  gnn_hidden_dim: 110
+  gnn_hidden_dim: 256
   num_layers: 4
-  sortpool_k: 56
-  conv_hidden_dims: [64, 64]
+  sortpool_k: 128
+  conv_hidden_dims: [256, 128]
   compile: false
-  lr: 0.01
+  lr: 0.005
   optimizer_algo: adamw
   loss_type: CE
   weight_decay: 0.05
 
-batch_size: 5000
+batch_size: 1024
 max_epochs: 500
 seed: 42
 
