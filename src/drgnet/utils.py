@@ -13,19 +13,24 @@ from pydantic import BaseModel
 class BaseModelWithParser(BaseModel):
     @classmethod
     def parse(cls) -> BaseModelWithParser:
+        """Parse the command line arguments and return a config object.
+
+        The `--config` argument is required and must be a path to a YAML config file. All other arguments are optional.
+        The config file is parsed first, then the command line arguments are used to override the config file values.
+        """
         parser = ArgumentParser()
         parser.add_argument("--config", type=str, help="Path to YAML config file.", metavar="FILE")
         parser = _make_parser(cls, parser)
         args = parser.parse_args()
 
-        config = Config.parse_yaml(Path(args.config))
+        config = Config.from_yaml(Path(args.config))
         del args.config  # Remove the config file path from the args because it's not a field in the config model
         _override_config(config, args)
 
         return config
 
     @classmethod
-    def parse_yaml(cls, path: Path) -> BaseModelWithParser:
+    def from_yaml(cls, path: Path) -> BaseModelWithParser:
         with open(path, "r") as f:
             config = yaml.safe_load(f)
         return cls(**config)
