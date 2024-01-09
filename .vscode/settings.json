@@ -1,0 +1,6 @@
+{
+    "yaml.schemas": {
+        "./configs/schema.json": "*.yaml",
+        "file:///workspaces/DRG-NET/configs/schema.json": "file:///workspaces/DRG-NET/configs/ddr_aptos_lesions.yaml"
+    }
+}

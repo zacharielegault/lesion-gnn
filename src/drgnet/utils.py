@@ -32,6 +32,21 @@ class BaseModelWithParser(BaseModel):
 
 
 class Config(BaseModelWithParser):
+    """Whenever this model is updated, the JSON schema should be updated as well.
+
+    To generate a JSON schema for this model, run:
+    >>> import json
+    >>> from drgnet.utils import Config
+    >>> print(json.dumps(Config.model_json_schema(), indent=4))
+
+    To validate a config file against the schema, run:
+    >>> import jsonschema
+    >>> from drgnet.utils import Config
+    >>> with open("config.yaml", "r") as f:
+    ...     config = yaml.safe_load(f)
+    >>> jsonschema.validate(config, Config.model_json_schema())
+    """
+
     dataset: DatasetConfig
     model: ModelConfig
     batch_size: int
