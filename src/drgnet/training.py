@@ -9,9 +9,10 @@ from drgnet.callbacks import ConfusionMatrixCallback
 from drgnet.datasets import DDR, Aptos, LesionsArgs, SiftArgs
 from drgnet.model import DRGNetLightning
 from drgnet.transforms import GaussianDistance
+from drgnet.utils import Config
 
 
-def train(config):
+def train(config: Config):
     print(config)
     L.seed_everything(config.seed)
 
