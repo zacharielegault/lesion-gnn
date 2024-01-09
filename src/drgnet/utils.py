@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import argparse
 import typing
 from argparse import ArgumentParser
@@ -8,35 +10,35 @@ import yaml
 from pydantic import BaseModel
 
 
-class Config(BaseModel):
-    dataset: "DatasetConfig"
-    model: "ModelConfig"
+class BaseModelWithParser(BaseModel):
+    @classmethod
+    def parse(cls) -> BaseModelWithParser:
+        parser = ArgumentParser()
+        parser.add_argument("--config", type=str, help="Path to YAML config file.", metavar="FILE")
+        parser = _make_parser(cls, parser)
+        args = parser.parse_args()
+
+        config = Config.parse_yaml(Path(args.config))
+        del args.config  # Remove the config file path from the args because it's not a field in the config model
+        _override_config(config, args)
+
+        return config
+
+    @classmethod
+    def parse_yaml(cls, path: Path) -> BaseModelWithParser:
+        with open(path, "r") as f:
+            config = yaml.safe_load(f)
+        return cls(**config)
+
+
+class Config(BaseModelWithParser):
+    dataset: DatasetConfig
+    model: ModelConfig
     batch_size: int
     max_epochs: int
     seed: int
     project_name: str
     tag: str
-
-    @classmethod
-    def parse_yaml(cls, path: Path) -> "Config":
-        with open(path, "r") as f:
-            config = yaml.safe_load(f)
-        return cls(**config)
-
-    @classmethod
-    def parse(cls) -> "Config":
-        config_parser = ArgumentParser()
-        config_parser.add_argument("--config", type=str, help="Path to YAML config file.", metavar="FILE")
-        args, argv = config_parser.parse_known_args()
-
-        config_path = Path(args.config)
-        config = Config.parse_yaml(config_path)
-
-        parser = _make_parser(config)
-        args = parser.parse_args(argv)
-        _override_config(config, args)
-
-        return config
 
 
 class DatasetConfig(BaseModel):
@@ -84,7 +86,7 @@ def _set_config_field(config: BaseModel, field_name: str, value: typing.Any):
     setattr(config, field_name, value)
 
 
-def _make_parser(config: BaseModel, parser: Optional[ArgumentParser] = None, prefix: str = "") -> ArgumentParser:
+def _make_parser(config: type(BaseModel), parser: Optional[ArgumentParser] = None, prefix: str = "") -> ArgumentParser:
     if parser is None:
         parser = ArgumentParser()
 
@@ -100,8 +102,8 @@ def _make_parser(config: BaseModel, parser: Optional[ArgumentParser] = None, pre
             assert len(typing.get_args(field_info.annotation)) == 2
             assert typing.get_args(field_info.annotation)[1] == type(None)
             parser.add_argument(f"--{prefix}{field_name}", type=typing.get_args(field_info.annotation)[0])
-        elif issubclass(field_info.annotation, BaseModel):
-            _make_parser(field_info.annotation, parser, prefix=field_name)
+        elif issubclass((t := typing._eval_type(field_info.annotation, globals(), locals())), BaseModel):
+            _make_parser(t, parser, prefix=field_name)
         else:
             raise ValueError(f"Unsupported type {field_info.annotation}")
 
