@@ -4,27 +4,27 @@ metric:
   name: val_kappa
   goal: maximize
 parameters:
-  lr:
+  model.lr:
     min: 0.00001
     max: 0.05
-  weight_decay:
+  model.weight_decay:
     min: 0.000001
     max: 0.05
-  optimizer:
+  model.optimizer:
     values: [adam, sgd, adamw]
-  gnn_hidden_dim:
+  model.gnn_hidden_dim:
     min: 16
     max: 128
     distribution: int_uniform
-  num_layers:
+  model.num_layers:
     min: 2
     max: 10
     distribution: int_uniform
-  sortpool_k:
+  model.sortpool_k:
     min: 8
     max: 128
     distribution: int_uniform
-  distance_sigma_px:
+  dataset.distance_sigma_px:
     min: 5.0
     max: 100.0
     distribution: uniform
