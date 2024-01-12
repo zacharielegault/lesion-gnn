@@ -16,7 +16,7 @@ dependencies = [
     "fundus_lesions_toolkit @ git+https://github.com/ClementPla/fundus-lesions-toolkit@main",
     "wandb",
     "attrs",
-    "albumentations"
+    "albumentations",
 ]
 readme = "README.md"
 
@@ -50,3 +50,4 @@ fix = true
 
 [tool.ruff.isort]
 known-first-party = ["drgnet"]
+known-third-party = ["wandb"]

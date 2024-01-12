@@ -2,9 +2,9 @@ from typing import Any
 
 import lightning as L
 import numpy as np
+import wandb
 from lightning.pytorch.utilities.types import STEP_OUTPUT
 
-import wandb
 from drgnet.model import DRGNetLightning
 
 

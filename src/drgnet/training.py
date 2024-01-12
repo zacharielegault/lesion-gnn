@@ -1,10 +1,10 @@
 import lightning as L
+import wandb
 from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning.pytorch.loggers import WandbLogger
 from torch_geometric.loader import DataLoader
 from torch_geometric.transforms import Compose, RadiusGraph, ToSparseTensor
 
-import wandb
 from drgnet.callbacks import ConfusionMatrixCallback
 from drgnet.datasets import DDR, Aptos, LesionsArgs, SiftArgs
 from drgnet.model import DRGNetLightning
