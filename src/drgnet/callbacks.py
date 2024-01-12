@@ -5,7 +5,7 @@ import numpy as np
 import wandb
 from lightning.pytorch.utilities.types import STEP_OUTPUT
 
-from drgnet.model import DRGNetLightning
+from drgnet.base_model import BaseModel
 
 
 class ConfusionMatrixCallback(L.Callback):
@@ -18,14 +18,14 @@ class ConfusionMatrixCallback(L.Callback):
         self.current_dataset = None
         self.labels = labels
 
-    def on_test_epoch_start(self, trainer: L.Trainer, pl_module: DRGNetLightning) -> None:
+    def on_test_epoch_start(self, trainer: L.Trainer, pl_module: BaseModel) -> None:
         self.test_predictions = []
         self.test_groundtruth = []
 
     def on_test_batch_end(
         self,
         trainer: L.Trainer,
-        pl_module: DRGNetLightning,
+        pl_module: BaseModel,
         outputs: STEP_OUTPUT,
         batch: Any,
         batch_idx: int,
@@ -34,7 +34,7 @@ class ConfusionMatrixCallback(L.Callback):
         self.test_predictions.append(outputs[0].cpu().numpy())
         self.test_groundtruth.append(outputs[1].cpu().numpy())
 
-    def on_test_epoch_end(self, trainer: L.Trainer, pl_module: DRGNetLightning) -> None:
+    def on_test_epoch_end(self, trainer: L.Trainer, pl_module: BaseModel) -> None:
         cm = wandb.plot.confusion_matrix(
             y_true=np.concatenate(self.test_groundtruth),
             preds=np.concatenate(self.test_predictions),
