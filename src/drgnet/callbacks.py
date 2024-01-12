@@ -5,7 +5,7 @@ import numpy as np
 import wandb
 from lightning.pytorch.utilities.types import STEP_OUTPUT
 
-from drgnet.base_model import BaseModel
+from drgnet.models.base import BaseModel
 
 
 class ConfusionMatrixCallback(L.Callback):

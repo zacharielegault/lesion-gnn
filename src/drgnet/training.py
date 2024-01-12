@@ -7,7 +7,7 @@ from torch_geometric.transforms import Compose, RadiusGraph, ToSparseTensor
 
 from drgnet.callbacks import ConfusionMatrixCallback
 from drgnet.datasets import DDR, Aptos, LesionsArgs, SiftArgs
-from drgnet.model import DRGNetLightning
+from drgnet.models.drgnet import DRGNetLightning
 from drgnet.transforms import GaussianDistance
 from drgnet.utils import Config
 

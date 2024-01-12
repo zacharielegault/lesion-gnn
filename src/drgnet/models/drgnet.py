@@ -9,7 +9,7 @@ from torch_geometric.data import Data
 from torch_geometric.nn import MLP, GraphConv, SortAggregation
 from torch_sparse import SparseTensor
 
-from drgnet.base_model import BaseModel
+from drgnet.models.base import BaseModel
 
 
 class DRGNet(nn.Module):
@@ -103,64 +103,15 @@ class DRGNetLightning(BaseModel):
         )
         self.model = torch_geometric.compile(model, dynamic=True) if compile else model
 
-    def forward(
-        self, x: Tensor, edge_index: Tensor | SparseTensor, batch: Tensor, edge_weight: Tensor | None = None
-    ) -> Tensor:
-        logits = self.model(x, edge_index, batch, edge_weight)
+    def forward(self, data: Data) -> Tensor:
+        if hasattr(data, "adj_t"):
+            edge_index = data.adj_t
+        else:
+            edge_index = data.edge_index
+
+        logits = self.model(data.x, edge_index, data.batch, data.edge_weight)
 
         if self.is_regression:
             logits = torch.clamp(logits.squeeze(1), min=0, max=self.num_classes - 1)
+
         return logits
-
-    def training_step(self, batch: Data, batch_idx: int) -> Tensor:
-        if hasattr(batch, "adj_t"):
-            edge_index = batch.adj_t
-        else:
-            edge_index = batch.edge_index
-
-        logits = self.model(batch.x, edge_index, batch.batch, batch.edge_weight)
-        loss = self.criterion(logits, batch.y)
-        self.log("train_loss", loss, batch_size=batch.num_graphs, on_step=False, on_epoch=True)
-        return loss
-
-    def validation_step(self, batch: Data, batch_idx: int) -> None:
-        if hasattr(batch, "adj_t"):
-            edge_index = batch.adj_t
-        else:
-            edge_index = batch.edge_index
-
-        logits = self(batch.x, edge_index, batch.batch, batch.edge_weight)
-        loss = self.criterion(logits, batch.y)
-        logits = self.logits_to_preds(logits)
-
-        self.log("val_loss", loss, batch_size=batch.num_graphs)
-
-        self.log_dict(
-            self.multiclass_metrics(logits, batch.y), batch_size=batch.num_graphs, on_step=False, on_epoch=True
-        )
-        self.log_dict(
-            self.referable_metrics(logits, batch.y), batch_size=batch.num_graphs, on_step=False, on_epoch=True
-        )
-
-    def test_step(self, batch: Data, batch_idx: int) -> None:
-        if hasattr(batch, "adj_t"):
-            edge_index = batch.adj_t
-        else:
-            edge_index = batch.edge_index
-
-        logits = self(batch.x, edge_index, batch.batch, batch.edge_weight)
-        logits = self.logits_to_preds(logits)
-        dataset_name = self.trainer.test_dataloaders.dataset.dataset_name
-        if dataset_name == "Aptos":
-            multiclass_metric = self.aptos_multiclass_metrics
-            referable_metric = self.aptos_referable_metrics
-        elif dataset_name == "DDR_test":
-            multiclass_metric = self.ddr_multiclass_metrics
-            referable_metric = self.ddr_referable_metrics
-
-        self.log_dict(multiclass_metric(logits, batch.y), batch_size=batch.num_graphs, on_step=False, on_epoch=True)
-        self.log_dict(referable_metric(logits, batch.y), batch_size=batch.num_graphs, on_step=False, on_epoch=True)
-        if not self.is_regression:
-            return torch.argmax(logits, dim=1), batch.y
-        else:
-            return logits, batch.y
