@@ -9,7 +9,7 @@ from torch_geometric.data import Data
 from torch_geometric.nn import MLP, GraphConv, SortAggregation
 from torch_sparse import SparseTensor
 
-from drgnet.models.base import BaseModel
+from drgnet.models.base import BaseLightningModule
 
 
 class DRGNet(nn.Module):
@@ -68,7 +68,7 @@ class DRGNet(nn.Module):
         return logits
 
 
-class DRGNetLightning(BaseModel):
+class DRGNetLightning(BaseLightningModule):
     def __init__(
         self,
         input_features: int,

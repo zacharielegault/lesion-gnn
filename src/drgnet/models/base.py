@@ -18,7 +18,7 @@ from drgnet.metrics import (
 )
 
 
-class BaseModel(L.LightningModule):
+class BaseLightningModule(L.LightningModule):
     def __init__(
         self,
         num_classes: int,
