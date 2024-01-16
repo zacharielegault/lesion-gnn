@@ -1,5 +1,6 @@
 import os.path as osp
-from typing import Any, Callable, List, Literal
+from enum import Enum
+from typing import Any, Callable, List
 
 import torch
 from torch_geometric.data import InMemoryDataset
@@ -8,6 +9,13 @@ from tqdm import tqdm
 
 from .nodes.lesions import LesionsArgs, LesionsExtractor
 from .nodes.sift import SiftArgs, SiftExtractor
+
+
+class ClassWeights(str, Enum):
+    UNIFORM = "uniform"
+    INVERSE = "inverse"
+    QUADRATIC_INVERSE = "quadratic_inverse"
+    INVERSE_FREQUENCY = "inverse_frequency"
 
 
 class BaseDataset(InMemoryDataset):
@@ -75,9 +83,7 @@ class BaseDataset(InMemoryDataset):
         _, counts = torch.unique(y, return_counts=True)
         return counts
 
-    def get_class_weights(
-        self, mode: Literal["uniform", "inverse", "quadratic_inverse", "inverse_frequency"] = "inverse_frequency"
-    ) -> torch.Tensor:
+    def get_class_weights(self, mode: ClassWeights = ClassWeights.INVERSE_FREQUENCY) -> torch.Tensor:
         counts = self.classes_counts
         if mode == "uniform":
             return torch.ones_like(counts)

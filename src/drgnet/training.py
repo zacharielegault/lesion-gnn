@@ -8,6 +8,7 @@ from torch_geometric.transforms import Compose, RadiusGraph, ToSparseTensor
 from drgnet.callbacks import ConfusionMatrixCallback
 from drgnet.datasets import DDR, Aptos, LesionsArgs, SiftArgs
 from drgnet.models.drgnet import DRGNetLightning
+from drgnet.models.pointnet import PointNetLightning
 from drgnet.transforms import GaussianDistance
 from drgnet.utils import Config
 
@@ -75,16 +76,17 @@ def train(config: Config):
     if test_dataset_aptos and test_dataset_ddr:
         test_loader_ddr = DataLoader(test_dataset_ddr, batch_size=config.batch_size, shuffle=False, num_workers=4)
         test_loader_aptos = DataLoader(test_dataset_aptos, batch_size=config.batch_size, shuffle=False, num_workers=4)
+
     class_weights = train_dataset.get_class_weights(mode="inverse_frequency")
-    print(class_weights)
+
     # Model
-    model = DRGNetLightning(
+    model = PointNetLightning(
         input_features=train_dataset.num_features,
-        gnn_hidden_dim=config.model.gnn_hidden_dim,
-        num_layers=config.model.num_layers,
-        sortpool_k=config.model.sortpool_k,
+        # gnn_hidden_dim=config.model.gnn_hidden_dim,
+        # num_layers=config.model.num_layers,
+        # sortpool_k=config.model.sortpool_k,
         num_classes=train_dataset.num_classes,
-        conv_hidden_dims=config.model.conv_hidden_dims,
+        # conv_hidden_dims=config.model.conv_hidden_dims,
         compile=config.model.compile,
         lr=config.model.lr,
         optimizer_algo=config.model.optimizer_algo,

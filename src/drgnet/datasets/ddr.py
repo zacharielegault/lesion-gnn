@@ -1,9 +1,16 @@
+from enum import Enum
 from pathlib import Path
-from typing import Any, Callable, Iterator, List, Literal, Tuple
+from typing import Any, Callable, Iterator, List, Tuple
 
 import pandas as pd
 
 from .base import BaseDataset, LesionsArgs, SiftArgs
+
+
+class DDRVariant(str, Enum):
+    TRAIN = "train"
+    VALID = "valid"
+    TEST = "test"
 
 
 class DDR(BaseDataset):
@@ -55,7 +62,7 @@ class DDR(BaseDataset):
         transform: Callable[..., Any] | None = None,
         log: bool = True,
         num_workers: int = 0,
-        variant: Literal["train", "valid", "test"] = "train",
+        variant: DDRVariant = DDRVariant.TRAIN,
     ):
         assert variant in ["train", "valid", "test"]
         self.variant = variant

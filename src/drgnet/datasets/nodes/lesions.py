@@ -1,6 +1,7 @@
 from dataclasses import asdict, dataclass
+from enum import Enum
 from pathlib import Path
-from typing import Literal, Optional, Tuple
+from typing import Optional, Tuple
 
 import cv2
 import numpy as np
@@ -11,11 +12,21 @@ from torch_geometric.data import Data
 from torch_geometric.utils import scatter
 
 
+class WhichFeatures(str, Enum):
+    ENCODER = "encoder"
+    DECODER = "decoder"
+
+
+class FeaturesReduction(str, Enum):
+    MEAN = "mean"
+    MAX = "max"
+
+
 @dataclass
 class LesionsArgs:
-    which_features: Literal["decoder", "encoder"]
+    which_features: WhichFeatures
     feature_layer: int
-    features_reduction: Literal["mean", "max"] = "mean"
+    features_reduction: FeaturesReduction = FeaturesReduction.MEAN
     reinterpolation: Optional[Tuple[int, int]] = None
 
     def to_dict(self) -> dict:
@@ -46,9 +57,9 @@ def extract_features_by_cc(cc, features, nlabel, reduce="mean"):
 class LesionsExtractor:
     def __init__(
         self,
-        which_features: Literal["decoder", "encoder"] = "encoder",
+        which_features: WhichFeatures = WhichFeatures.ENCODER,
         feature_layer: int = 3,
-        features_reduction: Literal["mean", "max"] = "mean",
+        features_reduction: FeaturesReduction = FeaturesReduction.MEAN,
         compile=True,
         reinterpolation: Optional[Tuple[int, int]] = None,
     ):

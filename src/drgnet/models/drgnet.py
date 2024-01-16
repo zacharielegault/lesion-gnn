@@ -1,5 +1,4 @@
 from itertools import pairwise
-from typing import Literal
 
 import torch
 import torch.nn.functional as F
@@ -9,7 +8,7 @@ from torch_geometric.data import Data
 from torch_geometric.nn import MLP, GraphConv, SortAggregation
 from torch_sparse import SparseTensor
 
-from drgnet.models.base import BaseLightningModule
+from .base import BaseLightningModule, BaseModelConfig, LossType, OptimizerAlgo
 
 
 class DRGNet(nn.Module):
@@ -68,6 +67,16 @@ class DRGNet(nn.Module):
         return logits
 
 
+class DRGNetModelConfig(BaseModelConfig):
+    """Specific config for DRGNet, extending the default config."""
+
+    input_features: int
+    gnn_hidden_dim: int
+    sortpool_k: int
+    conv_hidden_dims: tuple[int, int] = (16, 32)
+    compile: bool = False
+
+
 class DRGNetLightning(BaseLightningModule):
     def __init__(
         self,
@@ -80,13 +89,13 @@ class DRGNetLightning(BaseLightningModule):
         compile: bool = False,
         lr: float = 0.001,
         weight_decay: float = 0.01,
-        optimizer_algo: Literal["adam", "adamw", "sgd"] = "adamw",
-        loss_type: Literal["MSE", "CE", "SmoothL1"] = "CE",
-        weights: torch.Tensor | None = None,
+        optimizer_algo: OptimizerAlgo = OptimizerAlgo.ADAMW,
+        loss_type: LossType = LossType.CE,
+        class_weights: torch.Tensor | None = None,
     ) -> None:
         super().__init__(
             lr=lr,
-            weights=weights,
+            class_weights=class_weights,
             num_classes=num_classes,
             weight_decay=weight_decay,
             optimizer_algo=optimizer_algo,

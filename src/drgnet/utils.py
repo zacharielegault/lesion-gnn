@@ -1,18 +1,20 @@
-from __future__ import annotations
-
 import argparse
 import typing
 from argparse import ArgumentParser
 from pathlib import Path
-from typing import Optional, Tuple, Union
+from types import NoneType
+from typing import Optional, Union
 
 import yaml
 from pydantic import BaseModel
 
+from drgnet.datasets import DatasetConfig
+from drgnet.models import ModelConfig
+
 
 class BaseModelWithParser(BaseModel):
     @classmethod
-    def parse(cls) -> BaseModelWithParser:
+    def parse(cls) -> "BaseModelWithParser":
         """Parse the command line arguments and return a config object.
 
         The `--config` argument is required and must be a path to a YAML config file. All other arguments are optional.
@@ -30,7 +32,7 @@ class BaseModelWithParser(BaseModel):
         return config
 
     @classmethod
-    def from_yaml(cls, path: Path) -> BaseModelWithParser:
+    def from_yaml(cls, path: Path) -> "BaseModelWithParser":
         with open(path, "r") as f:
             config = yaml.safe_load(f)
         return cls(**config)
@@ -61,32 +63,6 @@ class Config(BaseModelWithParser):
     tag: str
 
 
-class DatasetConfig(BaseModel):
-    name: str
-    root_aptos: str
-    root_ddr: str
-    split: tuple[float, float]
-    num_keypoints: Optional[int] = None
-    sift_sigma: Optional[float] = None
-    distance_sigma_px: float
-    which_features: Optional[str] = None
-    feature_layer: Optional[int] = None
-    features_reduction: Optional[str] = "mean"
-    reinterpolation: Optional[Tuple[int, int]] = None
-
-
-class ModelConfig(BaseModel):
-    gnn_hidden_dim: int
-    num_layers: int
-    sortpool_k: int
-    conv_hidden_dims: Tuple[int, int]
-    compile: bool
-    lr: Optional[float] = 0.001
-    weight_decay: Optional[float] = 0.01
-    optimizer_algo: Optional[str] = "adamw"
-    loss_type: Optional[str] = "CE"
-
-
 def _override_config(config: BaseModel, args: argparse.Namespace):
     # Set the config fields to the values passed in as command line arguments. Args for nested fields are passed in
     # as dot-separated strings, e.g. `--dataset.path /path/to/dataset` will set `config.dataset.path` to the given
@@ -114,16 +90,24 @@ def _make_parser(config: type(BaseModel), parser: Optional[ArgumentParser] = Non
         prefix += "."  # Separate nested fields with a dot
 
     for field_name, field_info in config.model_fields.items():
-        if field_info.annotation in (int, float, str, bool):
+        if field_info.annotation in (int, float, str, bool) or issubclass(field_info.annotation, str):
             parser.add_argument(f"--{prefix}{field_name}", type=field_info.annotation)
         elif typing.get_origin(field_info.annotation) in (tuple, list):
             parser.add_argument(f"--{prefix}{field_name}", type=typing.get_args(field_info.annotation)[0], nargs="+")
         elif typing.get_origin(field_info.annotation) == Union:
-            assert len(typing.get_args(field_info.annotation)) == 2
-            assert typing.get_args(field_info.annotation)[1] == type(None)
-            parser.add_argument(f"--{prefix}{field_name}", type=typing.get_args(field_info.annotation)[0])
+            if (
+                len(typing.get_args(field_info.annotation)) == 2
+                and typing.get_args(field_info.annotation)[1] == NoneType
+            ):
+                parser.add_argument(f"--{prefix}{field_name}", type=typing.get_args(field_info.annotation)[0])
+            elif all(issubclass(t, BaseModel) for t in typing.get_args(field_info.annotation)):
+                for t in typing.get_args(field_info.annotation):
+                    _make_parser(t, parser, prefix=field_name)
         elif issubclass((t := typing._eval_type(field_info.annotation, globals(), locals())), BaseModel):
+            # Evaluate the type annotation to a concrete type, then check if it's a subclass of BaseModel
             _make_parser(t, parser, prefix=field_name)
+        elif issubclass(field_info.annotation, BaseModel):
+            _make_parser(field_info.annotation, parser, prefix=field_name)
         else:
             raise ValueError(f"Unsupported type {field_info.annotation}")
 
