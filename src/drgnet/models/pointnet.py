@@ -73,7 +73,7 @@ class PointNetLightning(BaseLightningModule):
             pos_dim=config.pos_dim,
             num_classes=1 if self.is_regression else config.num_classes.value,
         )
-        self.model = torch_geometric.compile(model, dynamic=True) if compile else model
+        self.model = torch_geometric.compile(model, dynamic=True) if config.compile else model
 
     def forward(self, data: Data) -> Tensor:
         logits = self.model(data.x, data.pos, data.batch)
