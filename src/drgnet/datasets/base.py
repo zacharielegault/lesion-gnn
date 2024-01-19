@@ -1,13 +1,21 @@
 import os.path as osp
-from typing import Any, Callable, List, Literal
+from enum import Enum
+from typing import Any, Callable
 
 import torch
 from torch_geometric.data import InMemoryDataset
 from torch_geometric.data.dataset import _get_flattened_data_list
 from tqdm import tqdm
 
-from .nodes.lesions import LesionsArgs, LesionsExtractor
-from .nodes.sift import SiftArgs, SiftExtractor
+from .nodes.lesions import LesionsExtractor, LesionsNodesConfig
+from .nodes.sift import SiftExtractor, SiftNodesConfig
+
+
+class ClassWeights(str, Enum):
+    UNIFORM = "uniform"
+    INVERSE = "inverse"
+    QUADRATIC_INVERSE = "quadratic_inverse"
+    INVERSE_FREQUENCY = "inverse_frequency"
 
 
 class BaseDataset(InMemoryDataset):
@@ -15,7 +23,7 @@ class BaseDataset(InMemoryDataset):
         self,
         *,
         root: str,
-        pre_transform_kwargs: SiftArgs | LesionsArgs,
+        pre_transform_kwargs: SiftNodesConfig | LesionsNodesConfig,
         transform: Callable[..., Any] | None = None,
         log: bool = True,
         num_workers: int = 0,
@@ -24,10 +32,10 @@ class BaseDataset(InMemoryDataset):
         self.num_workers = num_workers
 
         self.pre_transform_kwargs = pre_transform_kwargs
-        if isinstance(pre_transform_kwargs, SiftArgs):
+        if isinstance(pre_transform_kwargs, SiftNodesConfig):
             self.mode = "SIFT"
             pre_transform = SiftExtractor(**pre_transform_kwargs.to_dict())
-        elif isinstance(pre_transform_kwargs, LesionsArgs):
+        elif isinstance(pre_transform_kwargs, LesionsNodesConfig):
             self.mode = "LESIONS"
             pre_transform = LesionsExtractor(**pre_transform_kwargs.to_dict())
         else:
@@ -43,7 +51,7 @@ class BaseDataset(InMemoryDataset):
         self.data, self.slices = torch.load(self.processed_paths[0])
 
     @property
-    def processed_file_names(self) -> List[str]:
+    def processed_file_names(self) -> list[str]:
         """A list of files in the `processed_dir` which needs to be found in order to skip the processing."""
         return ["data.pt"]
 
@@ -75,9 +83,7 @@ class BaseDataset(InMemoryDataset):
         _, counts = torch.unique(y, return_counts=True)
         return counts
 
-    def get_class_weights(
-        self, mode: Literal["uniform", "inverse", "quadratic_inverse", "inverse_frequency"] = "inverse_frequency"
-    ) -> torch.Tensor:
+    def get_class_weights(self, mode: ClassWeights = ClassWeights.INVERSE_FREQUENCY) -> torch.Tensor:
         counts = self.classes_counts
         if mode == "uniform":
             return torch.ones_like(counts)

@@ -1,5 +1,5 @@
+import dataclasses
 from itertools import pairwise
-from typing import Literal
 
 import torch
 import torch.nn.functional as F
@@ -9,7 +9,9 @@ from torch_geometric.data import Data
 from torch_geometric.nn import MLP, GraphConv, SortAggregation
 from torch_sparse import SparseTensor
 
-from drgnet.models.base import BaseLightningModule
+from drgnet.utils.placeholder import Placeholder
+
+from .base import BaseLightningModule, BaseModelConfig
 
 
 class DRGNet(nn.Module):
@@ -68,40 +70,29 @@ class DRGNet(nn.Module):
         return logits
 
 
+@dataclasses.dataclass
+class DRGNetModelConfig(BaseModelConfig):
+    input_features: Placeholder[int]
+    gnn_hidden_dim: int
+    num_layers: int
+    sortpool_k: int
+    conv_hidden_dims: tuple[int, int] = (16, 32)
+    compile: bool = False
+
+
 class DRGNetLightning(BaseLightningModule):
-    def __init__(
-        self,
-        input_features: int,
-        gnn_hidden_dim: int,
-        num_layers: int,
-        sortpool_k: int,
-        num_classes: int,
-        conv_hidden_dims: tuple[int, int] = (16, 32),
-        compile: bool = False,
-        lr: float = 0.001,
-        weight_decay: float = 0.01,
-        optimizer_algo: Literal["adam", "adamw", "sgd"] = "adamw",
-        loss_type: Literal["MSE", "CE", "SmoothL1"] = "CE",
-        weights: torch.Tensor | None = None,
-    ) -> None:
-        super().__init__(
-            lr=lr,
-            weights=weights,
-            num_classes=num_classes,
-            weight_decay=weight_decay,
-            optimizer_algo=optimizer_algo,
-            loss_type=loss_type,
-        )
+    def __init__(self, config: DRGNetModelConfig) -> None:
+        super().__init__(config)
 
         model = DRGNet(
-            input_features=input_features,
-            gnn_hidden_dim=gnn_hidden_dim,
-            num_layers=num_layers,
-            sortpool_k=sortpool_k,
-            num_classes=1 if self.is_regression else num_classes,
-            conv_hidden_dims=conv_hidden_dims,
+            input_features=config.input_features.value,
+            gnn_hidden_dim=config.gnn_hidden_dim,
+            num_layers=config.num_layers,
+            sortpool_k=config.sortpool_k,
+            num_classes=1 if self.is_regression else config.num_classes.value,
+            conv_hidden_dims=config.conv_hidden_dims,
         )
-        self.model = torch_geometric.compile(model, dynamic=True) if compile else model
+        self.model = torch_geometric.compile(model, dynamic=True) if config.compile else model
 
     def forward(self, data: Data) -> Tensor:
         if hasattr(data, "adj_t"):

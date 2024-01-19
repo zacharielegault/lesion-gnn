@@ -1,7 +1,5 @@
 # IDE files
 .vscode/*
-# Except for settings.json, which is useful when sharing settings across workspaces
-!.vscode/settings.json
 
 # Lightning logs
 lightning_logs/

@@ -19,6 +19,7 @@ dependencies = [
     "albumentations",
 ]
 readme = "README.md"
+requires-python = ">=3.10"  # Needed for type hinting with generics and "|" operator
 
 [project.scripts]
 train = "drgnet.scripts.train:main"

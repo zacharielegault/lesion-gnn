@@ -1,4 +1,5 @@
-from typing import Literal
+import dataclasses
+from enum import Enum
 
 import lightning as L
 import torch
@@ -16,34 +17,58 @@ from drgnet.metrics import (
     ReferableDRPrecision,
     ReferableDRRecall,
 )
+from drgnet.utils.placeholder import Placeholder
+
+
+class OptimizerAlgo(str, Enum):
+    ADAM = "adam"
+    ADAMW = "adamw"
+    SGD = "sgd"
+
+
+class LossType(str, Enum):
+    MSE = "MSE"
+    CE = "CE"
+    SMOOTH_L1 = "SmoothL1"
+
+
+@dataclasses.dataclass
+class OptimizerConfig:
+    lr: float = 0.001
+    weight_decay: float = 0.01
+    algo: OptimizerAlgo = OptimizerAlgo.ADAMW
+    loss_type: LossType = LossType.CE
+    class_weights: torch.Tensor | None = None
+
+
+@dataclasses.dataclass
+class BaseModelConfig:
+    """Default config for all models. When subclassing BaseLightningModule, a subclass of this config should be created
+    as well.
+    """
+
+    num_classes: Placeholder[int]
+    optimizer: OptimizerConfig
 
 
 class BaseLightningModule(L.LightningModule):
-    def __init__(
-        self,
-        num_classes: int,
-        lr: float = 0.001,
-        weight_decay: float = 0.01,
-        optimizer_algo: Literal["adam", "adamw", "sgd"] = "adamw",
-        loss_type: Literal["MSE", "CE", "SmoothL1"] = "CE",
-        weights: torch.Tensor | None = None,
-    ) -> None:
+    def __init__(self, config: BaseModelConfig) -> None:
         super().__init__()
-        self.loss_type = loss_type
-        self.num_classes = num_classes
-        match loss_type:
-            case "MSE":
+        self.loss_type = config.optimizer.loss_type
+        self.num_classes = config.num_classes.value
+        match config.optimizer.loss_type:
+            case LossType.MSE:
                 self.criterion = nn.MSELoss()
-            case "SmoothL1":
+            case LossType.SMOOTH_L1:
                 self.criterion = nn.SmoothL1Loss()
-            case "CE":
-                self.criterion = nn.CrossEntropyLoss(weight=weights)
+            case LossType.CE:
+                self.criterion = nn.CrossEntropyLoss(weight=config.optimizer.class_weights)
             case other:
                 raise ValueError(f"Invalid loss type: {other}")
 
-        self.lr = lr
-        self.weight_decay = weight_decay
-        self.optimizer_algo = optimizer_algo
+        self.lr = config.optimizer.lr
+        self.weight_decay = config.optimizer.weight_decay
+        self.optimizer_algo = config.optimizer.algo
 
         self.setup_metrics()
 
@@ -95,11 +120,11 @@ class BaseLightningModule(L.LightningModule):
 
     def configure_optimizers(self) -> torch.optim.Optimizer:
         match self.optimizer_algo:
-            case "adam":
+            case OptimizerAlgo.ADAM:
                 return torch.optim.Adam(self.parameters(), lr=self.lr, weight_decay=self.weight_decay)
-            case "adamw":
+            case OptimizerAlgo.ADAMW:
                 return torch.optim.AdamW(self.parameters(), lr=self.lr, weight_decay=self.weight_decay)
-            case "sgd":
+            case OptimizerAlgo.SGD:
                 return torch.optim.SGD(self.parameters(), lr=self.lr, weight_decay=self.weight_decay)
 
     def logits_to_preds(self, logits: Tensor) -> Tensor:
