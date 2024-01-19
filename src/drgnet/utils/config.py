@@ -13,7 +13,18 @@ from drgnet.datasets import DatasetConfig
 from drgnet.models import ModelConfig
 
 
-def get_config(file_path: str | bytes | os.PathLike, module_name: str | None = None) -> "Config":
+@dataclass
+class Config:
+    dataset: DatasetConfig
+    model: ModelConfig
+    batch_size: int
+    max_epochs: int
+    seed: int
+    project_name: str
+    tag: str
+
+
+def get_config(file_path: str | bytes | os.PathLike, module_name: str | None = None) -> Config:
     """Load a config file and return a config object.
 
     The config file must be a Python file that defines a `cfg` variable. The `module_name` argument is optional; if
@@ -40,17 +51,6 @@ def get_config(file_path: str | bytes | os.PathLike, module_name: str | None = N
     return module.cfg
 
 
-@dataclass
-class Config:
-    dataset: DatasetConfig
-    model: ModelConfig
-    batch_size: int
-    max_epochs: int
-    seed: int
-    project_name: str
-    tag: str
-
-
 def parse_args() -> Config:
     """Parse the command line arguments and return a config object.
 
@@ -71,20 +71,6 @@ def parse_args() -> Config:
     _override_config(config, args)
 
     return config
-
-
-"""
-    parser = ArgumentParser()
-    parser.add_argument("--config", type=str, help="Path to YAML config file.", metavar="FILE")
-    parser = _make_parser(cls, parser)
-    args = parser.parse_args()
-
-    config = Config.from_yaml(Path(args.config))
-    del args.config  # Remove the config file path from the args because it's not a field in the config model
-    _override_config(config, args)
-
-    return config
-"""
 
 
 def _override_config(config, args: argparse.Namespace):
@@ -138,8 +124,3 @@ def _add_maybe_existing_arg(parser, dest, **kwargs):
     """Add an argument to the parser if it hasn't already been added."""
     if dest not in (action.dest for action in parser._actions):
         parser.add_argument("--" + dest, **kwargs)
-
-
-if __name__ == "__main__":
-    config = parse_args()
-    print(config)
