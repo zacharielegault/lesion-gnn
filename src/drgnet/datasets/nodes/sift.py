@@ -9,7 +9,7 @@ from torch_geometric.data import Data
 
 
 @dataclass
-class SiftArgs:
+class SiftNodesConfig:
     num_keypoints: int
     sigma: float
 

@@ -1,11 +1,11 @@
 #! /usr/bin/env python
 
 from drgnet.training import train
-from drgnet.utils import Config
+from drgnet.utils import parse_args
 
 
 def main():
-    config = Config.parse()
+    config = parse_args()
     train(config)
 
 

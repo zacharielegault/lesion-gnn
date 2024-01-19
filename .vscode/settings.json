@@ -1,5 +1,0 @@
-{
-    "yaml.schemas": {
-        "./configs/schema.json": "*/configs/ddr_aptos_lesions.yaml"
-    }
-}

@@ -22,7 +22,7 @@ class FeaturesReduction(str, Enum):
 
 
 @dataclass
-class LesionsArgs:
+class LesionsNodesConfig:
     which_features: WhichFeatures
     feature_layer: int
     features_reduction: FeaturesReduction = FeaturesReduction.MEAN

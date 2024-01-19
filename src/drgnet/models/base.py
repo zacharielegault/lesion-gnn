@@ -1,9 +1,9 @@
+from dataclasses import dataclass
 from enum import Enum
 
 import lightning as L
 import torch
 import torch.nn as nn
-from pydantic import BaseModel, ConfigDict
 from torch import Tensor
 from torch_geometric.data import Data
 from torchmetrics import MetricCollection
@@ -31,9 +31,8 @@ class LossType(str, Enum):
     SMOOTH_L1 = "SmoothL1"
 
 
-class OptimizerConfig(BaseModel):
-    model_config = ConfigDict(arbitrary_types_allowed=True)  # Nece
-
+@dataclass
+class OptimizerConfig:
     lr: float = 0.001
     weight_decay: float = 0.01
     algo: OptimizerAlgo = OptimizerAlgo.ADAMW
@@ -41,12 +40,12 @@ class OptimizerConfig(BaseModel):
     class_weights: torch.Tensor | None = None
 
 
-class BaseModelConfig(BaseModel):
+@dataclass
+class BaseModelConfig:
     """Default config for all models. When subclassing BaseLightningModule, a subclass of this config should be created
     as well.
     """
 
-    name: str
     num_classes: int
     optimizer: OptimizerConfig
 

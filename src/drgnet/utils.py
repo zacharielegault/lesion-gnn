@@ -1,60 +1,47 @@
 import argparse
+import dataclasses
+import importlib
 import os
+import sys
 import types
 import typing
 from argparse import ArgumentParser
-from pathlib import Path
+from dataclasses import dataclass
 from types import NoneType
-
-import yaml
-from pydantic import BaseModel
 
 from drgnet.datasets import DatasetConfig
 from drgnet.models import ModelConfig
 
 
-class BaseModelWithParser(BaseModel):
-    @classmethod
-    def parse(cls) -> "BaseModelWithParser":
-        """Parse the command line arguments and return a config object.
+def get_config(file_path: str | bytes | os.PathLike, module_name: str | None = None) -> "Config":
+    """Load a config file and return a config object.
 
-        The `--config` argument is required and must be a path to a YAML config file. All other arguments are optional.
-        The config file is parsed first, then the command line arguments are used to override the config file values.
-        """
-        parser = ArgumentParser()
-        parser.add_argument("--config", type=str, help="Path to YAML config file.", metavar="FILE")
-        parser = _make_parser(cls, parser)
-        args = parser.parse_args()
+    The config file must be a Python file that defines a `cfg` variable. The `module_name` argument is optional; if
+    provided, the module will be registered in `sys.modules` under the given name. This allows the config file to be
+    imported as a module, e.g. `import experiment_config`.
 
-        config = Config.from_yaml(Path(args.config))
-        del args.config  # Remove the config file path from the args because it's not a field in the config model
-        _override_config(config, args)
+    Args:
+        file_path: Path to the config file.
+        module_name: Optional name to register the config module under.
 
-        return config
-
-    @classmethod
-    def from_yaml(cls, path: Path) -> "BaseModelWithParser":
-        with open(path, "r") as f:
-            config = yaml.safe_load(f)
-        return cls(**config)
-
-
-class Config(BaseModelWithParser):
-    """Whenever this model is updated, the JSON schema should be updated as well.
-
-    To generate a JSON schema for this model, run:
-    >>> import json
-    >>> from drgnet.utils import Config
-    >>> print(json.dumps(Config.model_json_schema(), indent=4))
-
-    To validate a config file against the schema, run:
-    >>> import jsonschema
-    >>> from drgnet.utils import Config
-    >>> with open("config.yaml", "r") as f:
-    ...     config = yaml.safe_load(f)
-    >>> jsonschema.validate(config, Config.model_json_schema())
+    Returns:
+        The config object.
     """
 
+    name = module_name or "experiment_config"
+
+    spec = importlib.util.spec_from_file_location(name, file_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    if module_name is not None:
+        sys.modules[name] = module
+
+    return module.cfg
+
+
+@dataclass
+class Config:
     dataset: DatasetConfig
     model: ModelConfig
     batch_size: int
@@ -64,7 +51,43 @@ class Config(BaseModelWithParser):
     tag: str
 
 
-def _override_config(config: BaseModel, args: argparse.Namespace):
+def parse_args() -> Config:
+    """Parse the command line arguments and return a config object.
+
+    The `--config` argument is required and must be a path to a Python file that defines a `cfg` variable that
+    should be of type `Config`. The config file is parsed first, then the command line arguments are used to
+    override the config file values.
+
+    Returns:
+        The config object.
+    """
+    parser = ArgumentParser()
+    parser.add_argument("--config", type=str, help="Path to Python config file.", metavar="FILE", required=True)
+    args, remaining_argv = parser.parse_known_args()
+    config = get_config(args.config)
+
+    parser = _make_parser(config)
+    args = parser.parse_args(remaining_argv)
+    _override_config(config, args)
+
+    return config
+
+
+"""
+    parser = ArgumentParser()
+    parser.add_argument("--config", type=str, help="Path to YAML config file.", metavar="FILE")
+    parser = _make_parser(cls, parser)
+    args = parser.parse_args()
+
+    config = Config.from_yaml(Path(args.config))
+    del args.config  # Remove the config file path from the args because it's not a field in the config model
+    _override_config(config, args)
+
+    return config
+"""
+
+
+def _override_config(config, args: argparse.Namespace):
     # Set the config fields to the values passed in as command line arguments. Args for nested fields are passed in
     # as dot-separated strings, e.g. `--dataset.path /path/to/dataset` will set `config.dataset.path` to the given
     # path.
@@ -75,7 +98,7 @@ def _override_config(config: BaseModel, args: argparse.Namespace):
         _set_config_field(config, field_name, value)
 
 
-def _set_config_field(config: BaseModel, field_name: str, value: typing.Any):
+def _set_config_field(config, field_name: str, value: typing.Any):
     if "." in field_name:
         field_name, rest = field_name.split(".", 1)
         return _set_config_field(getattr(config, field_name), rest, value)
@@ -83,33 +106,40 @@ def _set_config_field(config: BaseModel, field_name: str, value: typing.Any):
     setattr(config, field_name, value)
 
 
-def _make_parser(config: type(BaseModel), parser: ArgumentParser | None = None, prefix: str = "") -> ArgumentParser:
+def _make_parser(config, parser: ArgumentParser | None = None, prefix: str = "") -> ArgumentParser:
     if parser is None:
         parser = ArgumentParser()
 
     if prefix:
         prefix += "."  # Separate nested fields with a dot
 
-    for field_name, field_info in config.model_fields.items():
-        if field_info.annotation in (int, float, str, bool):  # or issubclass(field_info.annotation, str):
-            parser.add_argument(f"--{prefix}{field_name}", type=field_info.annotation)
-        elif typing.get_origin(field_info.annotation) in (tuple, list):
-            parser.add_argument(f"--{prefix}{field_name}", type=typing.get_args(field_info.annotation)[0], nargs="+")
-        elif isinstance(field_info.annotation, types.UnionType):
-            if (
-                len(typing.get_args(field_info.annotation)) == 2
-                and typing.get_args(field_info.annotation)[1] == NoneType
-            ):
-                parser.add_argument(f"--{prefix}{field_name}", type=typing.get_args(field_info.annotation)[0])
-            elif all(issubclass(t, BaseModel) for t in typing.get_args(field_info.annotation)):
-                for t in typing.get_args(field_info.annotation):
-                    _make_parser(t, parser, prefix=field_name)
-        elif issubclass((t := typing._eval_type(field_info.annotation, globals(), locals())), BaseModel):
-            # Evaluate the type annotation to a concrete type, then check if it's a subclass of BaseModel
-            _make_parser(t, parser, prefix=field_name)
-        elif issubclass(field_info.annotation, BaseModel):
-            _make_parser(field_info.annotation, parser, prefix=field_name)
+    for field in dataclasses.fields(config):
+        if typing.get_origin(field.type) in (tuple, list):
+            _add_maybe_existing_arg(parser, prefix + field.name, type=typing.get_args(field.type)[0], nargs="+")
+        elif isinstance(field.type, types.UnionType):
+            if len(typing.get_args(field.type)) == 2 and typing.get_args(field.type)[1] == NoneType:
+                _add_maybe_existing_arg(parser, prefix + field.name, type=typing.get_args(field.type)[0])
+            elif all(dataclasses.is_dataclass(t) for t in typing.get_args(field.type)):
+                for t in typing.get_args(field.type):
+                    _make_parser(t, parser, prefix=prefix + field.name)
+            else:
+                raise ValueError(f"Unsupported type {field.type}")
+        elif dataclasses.is_dataclass(field.type):
+            _make_parser(field.type, parser, prefix=prefix + field.name)
+        elif issubclass(field.type, (int, float, str, bool)):
+            _add_maybe_existing_arg(parser, prefix + field.name, type=field.type)
         else:
-            raise ValueError(f"Unsupported type {field_info.annotation}")
+            raise ValueError(f"Unsupported type {field.type}")
 
     return parser
+
+
+def _add_maybe_existing_arg(parser, dest, **kwargs):
+    """Add an argument to the parser if it hasn't already been added."""
+    if dest not in (action.dest for action in parser._actions):
+        parser.add_argument("--" + dest, **kwargs)
+
+
+if __name__ == "__main__":
+    config = parse_args()
+    print(config)

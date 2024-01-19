@@ -36,5 +36,5 @@ command:
   - ${interpreter}
   - ${program}
   - "--config"
-  - "configs/ddr_aptos_lesions.yaml"
+  - "configs/ddr_aptos_lesions.py"
   - ${args}

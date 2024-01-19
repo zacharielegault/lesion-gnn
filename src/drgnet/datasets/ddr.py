@@ -4,7 +4,7 @@ from typing import Any, Callable, Iterator
 
 import pandas as pd
 
-from .base import BaseDataset, LesionsArgs, SiftArgs
+from .base import BaseDataset, LesionsNodesConfig, SiftNodesConfig
 
 
 class DDRVariant(str, Enum):
@@ -57,7 +57,7 @@ class DDR(BaseDataset):
     def __init__(
         self,
         *,
-        pre_transform_kwargs: SiftArgs | LesionsArgs,
+        pre_transform_kwargs: SiftNodesConfig | LesionsNodesConfig,
         root: str | None = None,
         transform: Callable[..., Any] | None = None,
         log: bool = True,

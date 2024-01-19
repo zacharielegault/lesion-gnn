@@ -7,8 +7,8 @@ from torch_geometric.data import InMemoryDataset
 from torch_geometric.data.dataset import _get_flattened_data_list
 from tqdm import tqdm
 
-from .nodes.lesions import LesionsArgs, LesionsExtractor
-from .nodes.sift import SiftArgs, SiftExtractor
+from .nodes.lesions import LesionsNodesConfig, LesionsExtractor
+from .nodes.sift import SiftNodesConfig, SiftExtractor
 
 
 class ClassWeights(str, Enum):
@@ -23,7 +23,7 @@ class BaseDataset(InMemoryDataset):
         self,
         *,
         root: str,
-        pre_transform_kwargs: SiftArgs | LesionsArgs,
+        pre_transform_kwargs: SiftNodesConfig | LesionsNodesConfig,
         transform: Callable[..., Any] | None = None,
         log: bool = True,
         num_workers: int = 0,
@@ -32,10 +32,10 @@ class BaseDataset(InMemoryDataset):
         self.num_workers = num_workers
 
         self.pre_transform_kwargs = pre_transform_kwargs
-        if isinstance(pre_transform_kwargs, SiftArgs):
+        if isinstance(pre_transform_kwargs, SiftNodesConfig):
             self.mode = "SIFT"
             pre_transform = SiftExtractor(**pre_transform_kwargs.to_dict())
-        elif isinstance(pre_transform_kwargs, LesionsArgs):
+        elif isinstance(pre_transform_kwargs, LesionsNodesConfig):
             self.mode = "LESIONS"
             pre_transform = LesionsExtractor(**pre_transform_kwargs.to_dict())
         else:
