@@ -3,7 +3,7 @@ import typing
 from argparse import ArgumentParser
 from pathlib import Path
 from types import NoneType
-from typing import Optional, Union
+from typing import Union
 
 import yaml
 from pydantic import BaseModel
@@ -82,7 +82,7 @@ def _set_config_field(config: BaseModel, field_name: str, value: typing.Any):
     setattr(config, field_name, value)
 
 
-def _make_parser(config: type(BaseModel), parser: Optional[ArgumentParser] = None, prefix: str = "") -> ArgumentParser:
+def _make_parser(config: type(BaseModel), parser: ArgumentParser | None = None, prefix: str = "") -> ArgumentParser:
     if parser is None:
         parser = ArgumentParser()
 

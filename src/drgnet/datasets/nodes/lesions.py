@@ -1,7 +1,6 @@
 from dataclasses import asdict, dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Optional, Tuple
 
 import cv2
 import numpy as np
@@ -27,7 +26,7 @@ class LesionsArgs:
     which_features: WhichFeatures
     feature_layer: int
     features_reduction: FeaturesReduction = FeaturesReduction.MEAN
-    reinterpolation: Optional[Tuple[int, int]] = None
+    reinterpolation: tuple[int, int] | None = None
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -61,7 +60,7 @@ class LesionsExtractor:
         feature_layer: int = 3,
         features_reduction: FeaturesReduction = FeaturesReduction.MEAN,
         compile=True,
-        reinterpolation: Optional[Tuple[int, int]] = None,
+        reinterpolation: tuple[int, int] | None = None,
     ):
         assert which_features in [
             "decoder",

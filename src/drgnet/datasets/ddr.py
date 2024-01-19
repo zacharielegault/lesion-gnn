@@ -1,6 +1,6 @@
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable, Iterator, List, Tuple
+from typing import Any, Callable, Iterator
 
 import pandas as pd
 
@@ -39,7 +39,7 @@ class DDR(BaseDataset):
     """
 
     @property
-    def raw_file_names(self) -> List[str]:
+    def raw_file_names(self) -> list[str]:
         """A list of files in the `raw_dir` which needs to be found in order to skip the download."""
         return [f"{self.variant}.txt"]
 
@@ -70,7 +70,7 @@ class DDR(BaseDataset):
             root=root, pre_transform_kwargs=pre_transform_kwargs, transform=transform, log=log, num_workers=num_workers
         )
 
-    def _path_and_label_generator(self) -> Iterator[Tuple[Path, int]]:
+    def _path_and_label_generator(self) -> Iterator[tuple[Path, int]]:
         for row in self._diagnosis.itertuples():
             path = Path(self.raw_dir) / self.variant / row.filename
             label = row.diagnosis

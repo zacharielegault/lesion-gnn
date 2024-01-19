@@ -1,6 +1,6 @@
 import os.path as osp
 from enum import Enum
-from typing import Any, Callable, List
+from typing import Any, Callable
 
 import torch
 from torch_geometric.data import InMemoryDataset
@@ -51,7 +51,7 @@ class BaseDataset(InMemoryDataset):
         self.data, self.slices = torch.load(self.processed_paths[0])
 
     @property
-    def processed_file_names(self) -> List[str]:
+    def processed_file_names(self) -> list[str]:
         """A list of files in the `processed_dir` which needs to be found in order to skip the processing."""
         return ["data.pt"]
 

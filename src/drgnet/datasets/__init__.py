@@ -1,5 +1,3 @@
-from typing import Optional, Tuple
-
 from pydantic import BaseModel
 
 from .aptos import Aptos
@@ -15,10 +13,10 @@ class DatasetConfig(BaseModel):
     root_aptos: str
     root_ddr: str
     split: tuple[float, float]
-    num_keypoints: Optional[int] = None
-    sift_sigma: Optional[float] = None
+    num_keypoints: int | None = None
+    sift_sigma: float | None = None
     distance_sigma_px: float
-    which_features: Optional[str] = None
-    feature_layer: Optional[int] = None
-    features_reduction: Optional[str] = "mean"
-    reinterpolation: Optional[Tuple[int, int]] = None
+    which_features: str | None = None
+    feature_layer: int | None = None
+    features_reduction: str | None = "mean"
+    reinterpolation: tuple[int, int] | None = None
