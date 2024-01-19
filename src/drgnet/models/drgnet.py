@@ -9,7 +9,7 @@ from torch_geometric.data import Data
 from torch_geometric.nn import MLP, GraphConv, SortAggregation
 from torch_sparse import SparseTensor
 
-from drgnet.placeholder import Placeholder
+from drgnet.utils.placeholder import Placeholder
 
 from .base import BaseLightningModule, BaseModelConfig
 

@@ -2,8 +2,8 @@ from drgnet.datasets import DatasetConfig
 from drgnet.datasets.nodes.lesions import LesionsNodesConfig
 from drgnet.models.base import LossType, OptimizerAlgo, OptimizerConfig
 from drgnet.models.drgnet import DRGNetModelConfig
-from drgnet.placeholder import Placeholder
-from drgnet.utils import Config
+from drgnet.utils.config import Config
+from drgnet.utils.placeholder import Placeholder
 
 __all__ = ["cfg"]
 

@@ -9,7 +9,7 @@ from drgnet.callbacks import ConfusionMatrixCallback
 from drgnet.datasets import DDR, Aptos
 from drgnet.models import get_model
 from drgnet.transforms import GaussianDistance
-from drgnet.utils import Config
+from drgnet.utils.config import Config
 
 
 def train(config: Config):

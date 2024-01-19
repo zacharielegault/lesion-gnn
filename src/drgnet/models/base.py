@@ -17,7 +17,7 @@ from drgnet.metrics import (
     ReferableDRPrecision,
     ReferableDRRecall,
 )
-from drgnet.placeholder import Placeholder
+from drgnet.utils.placeholder import Placeholder
 
 
 class OptimizerAlgo(str, Enum):

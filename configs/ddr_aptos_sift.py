@@ -1,6 +1,6 @@
 from drgnet.datasets import DatasetConfig
 from drgnet.models.drgnet import DRGNetModelConfig
-from drgnet.utils import Config
+from drgnet.utils.config import Config
 
 __all__ = ["cfg"]
 
