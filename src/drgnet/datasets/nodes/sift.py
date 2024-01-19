@@ -1,5 +1,5 @@
+import dataclasses
 import warnings
-from dataclasses import asdict, dataclass
 from pathlib import Path
 
 import cv2
@@ -8,13 +8,13 @@ import torch
 from torch_geometric.data import Data
 
 
-@dataclass
+@dataclasses.dataclass
 class SiftNodesConfig:
     num_keypoints: int
     sigma: float
 
     def to_dict(self) -> dict:
-        return asdict(self)
+        return dataclasses.asdict(self)
 
 
 class SiftExtractor:

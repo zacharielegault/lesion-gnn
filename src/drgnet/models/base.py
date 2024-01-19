@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+import dataclasses
 from enum import Enum
 
 import lightning as L
@@ -32,7 +32,7 @@ class LossType(str, Enum):
     SMOOTH_L1 = "SmoothL1"
 
 
-@dataclass
+@dataclasses.dataclass
 class OptimizerConfig:
     lr: float = 0.001
     weight_decay: float = 0.01
@@ -41,7 +41,7 @@ class OptimizerConfig:
     class_weights: torch.Tensor | None = None
 
 
-@dataclass
+@dataclasses.dataclass
 class BaseModelConfig:
     """Default config for all models. When subclassing BaseLightningModule, a subclass of this config should be created
     as well.

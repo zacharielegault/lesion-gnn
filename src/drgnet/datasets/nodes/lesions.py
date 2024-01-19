@@ -1,4 +1,4 @@
-from dataclasses import asdict, dataclass
+import dataclasses
 from enum import Enum
 from pathlib import Path
 
@@ -21,7 +21,7 @@ class FeaturesReduction(str, Enum):
     MAX = "max"
 
 
-@dataclass
+@dataclasses.dataclass
 class LesionsNodesConfig:
     which_features: WhichFeatures
     feature_layer: int
@@ -29,7 +29,7 @@ class LesionsNodesConfig:
     reinterpolation: tuple[int, int] | None = None
 
     def to_dict(self) -> dict:
-        return asdict(self)
+        return dataclasses.asdict(self)
 
 
 # def extract_features_by_cc(cc, features, nlabel, reduce=None):

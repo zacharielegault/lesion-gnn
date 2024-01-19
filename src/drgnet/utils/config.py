@@ -6,14 +6,13 @@ import sys
 import types
 import typing
 from argparse import ArgumentParser
-from dataclasses import dataclass
 from types import NoneType
 
 from drgnet.datasets import DatasetConfig
 from drgnet.models import ModelConfig
 
 
-@dataclass
+@dataclasses.dataclass
 class Config:
     dataset: DatasetConfig
     model: ModelConfig

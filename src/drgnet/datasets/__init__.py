@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+import dataclasses
 
 from .aptos import Aptos
 from .ddr import DDR
@@ -8,7 +8,7 @@ from .nodes.sift import SiftNodesConfig
 __all__ = ["Aptos", "DDR", "SiftNodesConfig", "LesionsNodesConfig", "DatasetConfig"]
 
 
-@dataclass
+@dataclasses.dataclass
 class DatasetConfig:
     name: str
     root_aptos: str

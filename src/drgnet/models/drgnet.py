@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+import dataclasses
 from itertools import pairwise
 
 import torch
@@ -70,7 +70,7 @@ class DRGNet(nn.Module):
         return logits
 
 
-@dataclass
+@dataclasses.dataclass
 class DRGNetModelConfig(BaseModelConfig):
     input_features: Placeholder[int]
     gnn_hidden_dim: int

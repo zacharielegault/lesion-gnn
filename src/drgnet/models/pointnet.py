@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+import dataclasses
 
 import torch
 import torch_geometric
@@ -59,7 +59,7 @@ class PointNet(torch.nn.Module):
         return self.mlp(x).log_softmax(dim=-1)
 
 
-@dataclass
+@dataclasses.dataclass
 class PointNetModelConfig(BaseModelConfig):
     input_features: Placeholder[int]
     pos_dim: int
