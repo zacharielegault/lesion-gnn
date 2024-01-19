@@ -10,6 +10,7 @@ from types import NoneType
 
 from drgnet.datasets import DatasetConfig
 from drgnet.models import ModelConfig
+from drgnet.utils.placeholder import Placeholder
 
 
 @dataclasses.dataclass
@@ -111,6 +112,11 @@ def _make_parser(config, parser: ArgumentParser | None = None, prefix: str = "")
                 raise ValueError(f"Unsupported type {field.type}")
         elif dataclasses.is_dataclass(field.type):
             _make_parser(field.type, parser, prefix=prefix + field.name)
+        elif isinstance(field.type, typing._GenericAlias):
+            if typing.get_origin(field.type) == Placeholder:
+                continue
+            else:
+                raise ValueError(f"Unsupported type {field.type}")
         elif issubclass(field.type, (int, float, str, bool)):
             _add_maybe_existing_arg(parser, prefix + field.name, type=field.type)
         else:
