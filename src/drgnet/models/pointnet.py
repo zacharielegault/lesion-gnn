@@ -4,7 +4,7 @@ from torch import LongTensor, Tensor
 from torch_geometric.data import Data
 from torch_geometric.nn import MLP, PointNetConv, fps, global_max_pool, radius
 
-from .base import BaseLightningModule, BaseModelConfig, LossType, OptimizerAlgo
+from .base import BaseLightningModule, BaseModelConfig
 
 
 class SAModule(torch.nn.Module):
@@ -56,32 +56,18 @@ class PointNet(torch.nn.Module):
 
 
 class PointNetModelConfig(BaseModelConfig):
-    ...
+    name: str = "PointNet"
+    input_features: int
+    pos_dim: int
 
 
 class PointNetLightning(BaseLightningModule):
-    def __init__(
-        self,
-        input_features: int,
-        num_classes: int,
-        pos_dim: int = 2,
-        compile: bool = False,
-        lr: float = 0.001,
-        weight_decay: float = 0.01,
-        optimizer_algo: OptimizerAlgo = OptimizerAlgo.ADAMW,
-        loss_type: LossType = LossType.CE,
-        weights: torch.Tensor | None = None,
-    ):
-        super().__init__(
-            lr=lr,
-            class_weights=weights,
-            num_classes=num_classes,
-            weight_decay=weight_decay,
-            optimizer_algo=optimizer_algo,
-            loss_type=loss_type,
-        )
+    def __init__(self, config: PointNetModelConfig) -> None:
+        super().__init__(config)
         model = PointNet(
-            input_features=input_features, pos_dim=pos_dim, num_classes=1 if self.is_regression else num_classes
+            input_features=config.input_features,
+            pos_dim=config.pos_dim,
+            num_classes=1 if self.is_regression else config.num_classes,
         )
         self.model = torch_geometric.compile(model, dynamic=True) if compile else model
 

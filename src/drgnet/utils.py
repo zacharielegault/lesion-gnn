@@ -1,9 +1,10 @@
 import argparse
+import os
+import types
 import typing
 from argparse import ArgumentParser
 from pathlib import Path
 from types import NoneType
-from typing import Union
 
 import yaml
 from pydantic import BaseModel
@@ -90,11 +91,11 @@ def _make_parser(config: type(BaseModel), parser: ArgumentParser | None = None, 
         prefix += "."  # Separate nested fields with a dot
 
     for field_name, field_info in config.model_fields.items():
-        if field_info.annotation in (int, float, str, bool) or issubclass(field_info.annotation, str):
+        if field_info.annotation in (int, float, str, bool):  # or issubclass(field_info.annotation, str):
             parser.add_argument(f"--{prefix}{field_name}", type=field_info.annotation)
         elif typing.get_origin(field_info.annotation) in (tuple, list):
             parser.add_argument(f"--{prefix}{field_name}", type=typing.get_args(field_info.annotation)[0], nargs="+")
-        elif typing.get_origin(field_info.annotation) == Union:
+        elif isinstance(field_info.annotation, types.UnionType):
             if (
                 len(typing.get_args(field_info.annotation)) == 2
                 and typing.get_args(field_info.annotation)[1] == NoneType

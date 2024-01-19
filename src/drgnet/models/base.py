@@ -36,7 +36,7 @@ class OptimizerConfig(BaseModel):
 
     lr: float = 0.001
     weight_decay: float = 0.01
-    optimizer_algo: OptimizerAlgo = OptimizerAlgo.ADAMW
+    algo: OptimizerAlgo = OptimizerAlgo.ADAMW
     loss_type: LossType = LossType.CE
     class_weights: torch.Tensor | None = None
 
@@ -46,36 +46,29 @@ class BaseModelConfig(BaseModel):
     as well.
     """
 
+    name: str
     num_classes: int
     optimizer: OptimizerConfig
 
 
 class BaseLightningModule(L.LightningModule):
-    def __init__(
-        self,
-        num_classes: int,
-        lr: float = 0.001,
-        weight_decay: float = 0.01,
-        optimizer_algo: OptimizerAlgo = OptimizerAlgo.ADAMW,
-        loss_type: LossType = LossType.CE,
-        class_weights: torch.Tensor | None = None,
-    ) -> None:
+    def __init__(self, config: BaseModelConfig) -> None:
         super().__init__()
-        self.loss_type = loss_type
-        self.num_classes = num_classes
-        match loss_type:
+        self.loss_type = config.optimizer.loss_type
+        self.num_classes = config.num_classes
+        match config.optimizer.loss_type:
             case LossType.MSE:
                 self.criterion = nn.MSELoss()
             case LossType.SMOOTH_L1:
                 self.criterion = nn.SmoothL1Loss()
             case LossType.CE:
-                self.criterion = nn.CrossEntropyLoss(weight=class_weights)
+                self.criterion = nn.CrossEntropyLoss(weight=config.optimizer.class_weights)
             case other:
                 raise ValueError(f"Invalid loss type: {other}")
 
-        self.lr = lr
-        self.weight_decay = weight_decay
-        self.optimizer_algo = optimizer_algo
+        self.lr = config.optimizer.lr
+        self.weight_decay = config.optimizer.weight_decay
+        self.optimizer_algo = config.optimizer.algo
 
         self.setup_metrics()
 

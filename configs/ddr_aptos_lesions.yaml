@@ -17,7 +17,7 @@ model:
   compile: false
   optimizer:
     lr: 0.023809590039981624
-    optimizer_algo: adamw
+    algo: adamw
     loss_type: CE
     weight_decay: 0.03128685798976109
 

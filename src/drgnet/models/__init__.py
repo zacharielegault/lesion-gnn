@@ -13,8 +13,8 @@ __all__ = ["DRGNetLightning", "PointNetLightning", "ModelConfig"]
 def get_model(config: ModelConfig) -> Union[DRGNetLightning, PointNetLightning]:
     """Return a LightningModule for the given config."""
     if isinstance(config, DRGNetModelConfig):
-        return DRGNetLightning(**config.model_dump())
+        return DRGNetLightning(config)
     elif isinstance(config, PointNetModelConfig):
-        return PointNetLightning(**config.model_dump())
+        return PointNetLightning(config)
     else:
         raise ValueError(f"Unknown model config type {type(config)}")
