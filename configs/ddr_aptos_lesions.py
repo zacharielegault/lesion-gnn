@@ -13,6 +13,7 @@ cfg = Config(
         root_aptos="data/aptos",
         root_ddr="data/DDR",
         split=(0.8, 0.2),
+        distance_sigma_px=10.0,
         nodes=LesionsNodesConfig(
             which_features="encoder",
             feature_layer=4,
