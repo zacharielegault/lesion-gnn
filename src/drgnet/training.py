@@ -38,6 +38,7 @@ def train(config: Config):
             pre_transform_kwargs=config.dataset.nodes,
         )
         train_dataset = train_dataset.index_select([i for i, d in enumerate(train_dataset) if d.y < 5])
+
         valid_dataset = DDR(
             root=config.dataset.root_ddr,
             transform=transform,
@@ -54,7 +55,7 @@ def train(config: Config):
         test_dataset_aptos = Aptos(
             root=config.dataset.root_aptos, transform=transform, pre_transform_kwargs=config.dataset.nodes
         )
-    train_dataset.num_classes
+
     train_loader = DataLoader(
         train_dataset,
         batch_size=config.batch_size,
@@ -72,6 +73,8 @@ def train(config: Config):
     config.model.optimizer.class_weights = train_dataset.get_class_weights(mode="inverse_frequency")
 
     # Model
+    config.model.num_classes.value = train_dataset.num_classes
+    config.model.input_features.value = train_dataset.num_features
     model = get_model(config.model)
 
     logged_args = config.model_dump()

@@ -17,6 +17,7 @@ from drgnet.metrics import (
     ReferableDRPrecision,
     ReferableDRRecall,
 )
+from drgnet.placeholder import Placeholder
 
 
 class OptimizerAlgo(str, Enum):
@@ -46,7 +47,7 @@ class BaseModelConfig:
     as well.
     """
 
-    num_classes: int
+    num_classes: Placeholder[int]
     optimizer: OptimizerConfig
 
 
@@ -54,7 +55,7 @@ class BaseLightningModule(L.LightningModule):
     def __init__(self, config: BaseModelConfig) -> None:
         super().__init__()
         self.loss_type = config.optimizer.loss_type
-        self.num_classes = config.num_classes
+        self.num_classes = config.num_classes.value
         match config.optimizer.loss_type:
             case LossType.MSE:
                 self.criterion = nn.MSELoss()

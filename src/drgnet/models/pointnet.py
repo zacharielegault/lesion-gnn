@@ -6,6 +6,8 @@ from torch import LongTensor, Tensor
 from torch_geometric.data import Data
 from torch_geometric.nn import MLP, PointNetConv, fps, global_max_pool, radius
 
+from drgnet.placeholder import Placeholder
+
 from .base import BaseLightningModule, BaseModelConfig
 
 
@@ -59,7 +61,7 @@ class PointNet(torch.nn.Module):
 
 @dataclass
 class PointNetModelConfig(BaseModelConfig):
-    input_features: int
+    input_features: Placeholder[int]
     pos_dim: int
 
 
@@ -67,9 +69,9 @@ class PointNetLightning(BaseLightningModule):
     def __init__(self, config: PointNetModelConfig) -> None:
         super().__init__(config)
         model = PointNet(
-            input_features=config.input_features,
+            input_features=config.input_features.value,
             pos_dim=config.pos_dim,
-            num_classes=1 if self.is_regression else config.num_classes,
+            num_classes=1 if self.is_regression else config.num_classes.value,
         )
         self.model = torch_geometric.compile(model, dynamic=True) if compile else model
 

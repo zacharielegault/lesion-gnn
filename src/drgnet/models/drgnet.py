@@ -9,6 +9,8 @@ from torch_geometric.data import Data
 from torch_geometric.nn import MLP, GraphConv, SortAggregation
 from torch_sparse import SparseTensor
 
+from drgnet.placeholder import Placeholder
+
 from .base import BaseLightningModule, BaseModelConfig
 
 
@@ -70,7 +72,7 @@ class DRGNet(nn.Module):
 
 @dataclass
 class DRGNetModelConfig(BaseModelConfig):
-    input_features: int
+    input_features: Placeholder[int]
     gnn_hidden_dim: int
     num_layers: int
     sortpool_k: int
@@ -83,11 +85,11 @@ class DRGNetLightning(BaseLightningModule):
         super().__init__(config)
 
         model = DRGNet(
-            input_features=config.input_features,
+            input_features=config.input_features.value,
             gnn_hidden_dim=config.gnn_hidden_dim,
             num_layers=config.num_layers,
             sortpool_k=config.sortpool_k,
-            num_classes=1 if self.is_regression else config.num_classes,
+            num_classes=1 if self.is_regression else config.num_classes.value,
             conv_hidden_dims=config.conv_hidden_dims,
         )
         self.model = torch_geometric.compile(model, dynamic=True) if compile else model

@@ -1,7 +1,9 @@
+from drgnet.datasets import DatasetConfig
 from drgnet.datasets.nodes.lesions import LesionsNodesConfig
 from drgnet.models.base import LossType, OptimizerAlgo, OptimizerConfig
 from drgnet.models.drgnet import DRGNetModelConfig
-from drgnet.utils import Config, DatasetConfig
+from drgnet.placeholder import Placeholder
+from drgnet.utils import Config
 
 __all__ = ["cfg"]
 
@@ -18,8 +20,8 @@ cfg = Config(
         ),
     ),
     model=DRGNetModelConfig(
-        num_classes=5,  # FIXME
-        input_features=1,  # FIXME
+        num_classes=Placeholder(),
+        input_features=Placeholder(),
         gnn_hidden_dim=128,
         num_layers=2,
         sortpool_k=74,

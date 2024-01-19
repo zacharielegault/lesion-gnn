@@ -7,8 +7,8 @@ from torch_geometric.data import InMemoryDataset
 from torch_geometric.data.dataset import _get_flattened_data_list
 from tqdm import tqdm
 
-from .nodes.lesions import LesionsNodesConfig, LesionsExtractor
-from .nodes.sift import SiftNodesConfig, SiftExtractor
+from .nodes.lesions import LesionsExtractor, LesionsNodesConfig
+from .nodes.sift import SiftExtractor, SiftNodesConfig
 
 
 class ClassWeights(str, Enum):
