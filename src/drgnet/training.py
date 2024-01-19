@@ -1,3 +1,5 @@
+import dataclasses
+
 import lightning as L
 import wandb
 from lightning.pytorch.callbacks import ModelCheckpoint
@@ -77,7 +79,7 @@ def train(config: Config):
     config.model.input_features.value = train_dataset.num_features
     model = get_model(config.model)
 
-    logged_args = config.model_dump()
+    logged_args = dataclasses.asdict(config)
     logged_args["input_features"] = train_dataset.num_features
 
     logger = WandbLogger(
