@@ -63,6 +63,7 @@ class PointNet(torch.nn.Module):
 class PointNetModelConfig(BaseModelConfig):
     input_features: Placeholder[int]
     pos_dim: int
+    compile: bool = False
 
 
 class PointNetLightning(BaseLightningModule):
