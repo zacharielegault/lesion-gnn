@@ -16,3 +16,6 @@ class Placeholder(Generic[T]):
     @value.setter
     def value(self, value: T) -> None:
         self._value = value
+
+    def __repr__(self) -> str:
+        return repr(self._value) if self._value is not None else "Placeholder"
