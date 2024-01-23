@@ -78,6 +78,7 @@ class DRGNetModelConfig(BaseModelConfig):
     sortpool_k: int
     conv_hidden_dims: tuple[int, int] = (16, 32)
     compile: bool = False
+    name: str = dataclasses.field(default="DRGNet", init=False)
 
 
 class DRGNetLightning(BaseLightningModule):

@@ -79,6 +79,7 @@ class SetTransformerModelConfig(BaseModelConfig):
     layer_norm: bool
     dropout: float
     compile: bool = False
+    name: str = dataclasses.field(default="SetTransformer", init=False)
 
 
 class SetTransformerLightning(BaseLightningModule):

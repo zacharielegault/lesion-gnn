@@ -49,6 +49,7 @@ class BaseModelConfig:
 
     num_classes: Placeholder[int]
     optimizer: OptimizerConfig
+    name: str
 
 
 class BaseLightningModule(L.LightningModule):

@@ -64,6 +64,7 @@ class PointNetModelConfig(BaseModelConfig):
     input_features: Placeholder[int]
     pos_dim: int
     compile: bool = False
+    name: str = dataclasses.field(default="PointNet", init=False)
 
 
 class PointNetLightning(BaseLightningModule):
