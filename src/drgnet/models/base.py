@@ -1,9 +1,11 @@
 import dataclasses
 from enum import Enum
+from typing import Any
 
 import lightning as L
 import torch
 import torch.nn as nn
+from pl_bolts.optimizers.lr_scheduler import LinearWarmupCosineAnnealingLR
 from torch import Tensor
 from torch_geometric.data import Data
 from torchmetrics import MetricCollection
@@ -35,6 +37,8 @@ class LossType(str, Enum):
 @dataclasses.dataclass
 class OptimizerConfig:
     lr: float = 0.001
+    schedule_warmup_epochs: int | None = 10  # Set to None to disable warmup
+    schedule_min_lr: float | None = 0.0  # Set to None to disable annealing
     weight_decay: float = 0.01
     algo: OptimizerAlgo = OptimizerAlgo.ADAMW
     loss_type: LossType = LossType.CE
@@ -55,6 +59,8 @@ class BaseModelConfig:
 class BaseLightningModule(L.LightningModule):
     def __init__(self, config: BaseModelConfig) -> None:
         super().__init__()
+        self.warmup_epochs = config.optimizer.schedule_warmup_epochs
+        self.min_lr = config.optimizer.schedule_min_lr or config.optimizer.lr  # If None, disable annealing
         self.loss_type = config.optimizer.loss_type
         self.num_classes = config.num_classes.value
         match config.optimizer.loss_type:
@@ -119,14 +125,44 @@ class BaseLightningModule(L.LightningModule):
         self.aptos_referable_metrics = self.referable_metrics.clone(prefix="test_referable_aptos_")
         self.ddr_referable_metrics = self.referable_metrics.clone(prefix="test_referable_ddr_")
 
-    def configure_optimizers(self) -> torch.optim.Optimizer:
+    def configure_optimizers(self) -> torch.optim.Optimizer | dict[str, Any]:
         match self.optimizer_algo:
             case OptimizerAlgo.ADAM:
-                return torch.optim.Adam(self.parameters(), lr=self.lr, weight_decay=self.weight_decay)
+                optimizer = torch.optim.Adam(self.parameters(), lr=self.lr, weight_decay=self.weight_decay)
             case OptimizerAlgo.ADAMW:
-                return torch.optim.AdamW(self.parameters(), lr=self.lr, weight_decay=self.weight_decay)
+                optimizer = torch.optim.AdamW(self.parameters(), lr=self.lr, weight_decay=self.weight_decay)
             case OptimizerAlgo.SGD:
-                return torch.optim.SGD(self.parameters(), lr=self.lr, weight_decay=self.weight_decay)
+                optimizer = torch.optim.SGD(self.parameters(), lr=self.lr, weight_decay=self.weight_decay)
+
+        if self.warmup_epochs is None or self.warmup_epochs == 0:
+            # If no warmup, use cosine annealing. If config.optimizer.schedule_min_lr was None, use self.lr as min_lr
+            # which means no annealing.
+            return {
+                "optimizer": optimizer,
+                "lr_scheduler": {
+                    "scheduler": torch.optim.lr_scheduler.CosineAnnealingLR(
+                        optimizer, T_max=self.trainer.max_epochs, eta_min=self.min_lr
+                    ),
+                    "interval": "epoch",
+                    "frequency": 1,
+                    "monitor": "val_loss",
+                },
+            }
+        else:
+            return {
+                "optimizer": optimizer,
+                "lr_scheduler": {
+                    "scheduler": LinearWarmupCosineAnnealingLR(
+                        optimizer,
+                        warmup_epochs=self.warmup_epochs,
+                        max_epochs=self.trainer.max_epochs,
+                        eta_min=self.min_lr,
+                    ),
+                    "interval": "epoch",
+                    "frequency": 1,
+                    "monitor": "val_loss",
+                },
+            }
 
     def logits_to_preds(self, logits: Tensor) -> Tensor:
         if not self.is_regression:

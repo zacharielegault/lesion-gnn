@@ -17,6 +17,7 @@ dependencies = [
     "wandb",
     "attrs",
     "albumentations",
+    "lightning-bolts",
 ]
 readme = "README.md"
 requires-python = ">=3.10"  # Needed for type hinting with generics and "|" operator
