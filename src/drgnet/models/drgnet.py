@@ -70,9 +70,9 @@ class DRGNet(nn.Module):
         return logits
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(kw_only=True)
 class DRGNetModelConfig(BaseModelConfig):
-    input_features: Placeholder[int]
+    input_features: Placeholder[int] = dataclasses.field(default_factory=Placeholder)
     gnn_hidden_dim: int
     num_layers: int
     sortpool_k: int

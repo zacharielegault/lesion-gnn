@@ -5,19 +5,21 @@ import os
 import sys
 import types
 import typing
+import warnings
 from argparse import ArgumentParser
 from types import NoneType
 
-from drgnet.datasets import DatasetConfig
+from drgnet.datasets.datamodule import DataConfig
 from drgnet.models import ModelConfig
 from drgnet.utils.placeholder import Placeholder
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(kw_only=True)
 class Config:
-    dataset: DatasetConfig
+    dataset: DataConfig
     model: ModelConfig
-    batch_size: int
+    monitored_metric: str
+    monitor_mode: str
     max_epochs: int
     seed: int
     project_name: str
@@ -66,9 +68,11 @@ def parse_args() -> Config:
     args, remaining_argv = parser.parse_known_args()
     config = get_config(args.config)
 
-    parser = _make_parser(config)
-    args = parser.parse_args(remaining_argv)
-    _override_config(config, args)
+    if remaining_argv:
+        warnings.warn("Overriding config values with command line arguments is disabled")
+    # parser = _make_parser(config)
+    # args = parser.parse_args(remaining_argv)
+    # _override_config(config, args)
 
     return config
 
@@ -100,29 +104,38 @@ def _make_parser(config, parser: ArgumentParser | None = None, prefix: str = "")
         prefix += "."  # Separate nested fields with a dot
 
     for field in dataclasses.fields(config):
-        if typing.get_origin(field.type) in (tuple, list):
-            _add_maybe_existing_arg(parser, prefix + field.name, type=typing.get_args(field.type)[0], nargs="+")
-        elif isinstance(field.type, types.UnionType):
-            if len(typing.get_args(field.type)) == 2 and typing.get_args(field.type)[1] == NoneType:
-                _add_maybe_existing_arg(parser, prefix + field.name, type=typing.get_args(field.type)[0])
-            elif all(dataclasses.is_dataclass(t) for t in typing.get_args(field.type)):
-                for t in typing.get_args(field.type):
-                    _make_parser(t, parser, prefix=prefix + field.name)
-            else:
-                raise ValueError(f"Unsupported type {field.type}")
-        elif dataclasses.is_dataclass(field.type):
-            _make_parser(field.type, parser, prefix=prefix + field.name)
-        elif isinstance(field.type, typing._GenericAlias):
-            if typing.get_origin(field.type) == Placeholder:
-                continue
-            else:
-                raise ValueError(f"Unsupported type {field.type}")
-        elif issubclass(field.type, (int, float, str, bool)):
-            _add_maybe_existing_arg(parser, prefix + field.name, type=field.type)
-        else:
-            raise ValueError(f"Unsupported type {field.type}")
+        _dispatch(field.type, prefix + field.name, parser)
 
     return parser
+
+
+def _dispatch(
+    field_type: typing.Type,
+    field_name: str,
+    parser: ArgumentParser,
+):
+    if typing.get_origin(field_type) in (tuple, list):
+        _dispatch(typing.get_args(field_type)[0], field_name, parser)
+        # _add_maybe_existing_arg(parser, field_name, type=typing.get_args(field_type)[0], nargs="+")
+    elif isinstance(field_type, types.UnionType) or isinstance(field_type, typing._UnionGenericAlias):
+        if len(typing.get_args(field_type)) == 2 and typing.get_args(field_type)[1] == NoneType:
+            _add_maybe_existing_arg(parser, field_name, type=typing.get_args(field_type)[0])
+        elif all(dataclasses.is_dataclass(t) for t in typing.get_args(field_type)):
+            for t in typing.get_args(field_type):
+                _make_parser(t, parser, prefix=field_name)
+        else:
+            raise ValueError(f"Unsupported type {field_type}")
+    elif dataclasses.is_dataclass(field_type):
+        _make_parser(field_type, parser, prefix=field_name)
+    elif isinstance(field_type, typing._GenericAlias):
+        if typing.get_origin(field_type) == Placeholder:
+            return
+        else:
+            raise ValueError(f"Unsupported type {field_type}")
+    elif issubclass(field_type, (int, float, str, bool)):
+        _add_maybe_existing_arg(parser, field_name, type=field_type)
+    else:
+        raise ValueError(f"Unsupported type {field_type}")
 
 
 def _add_maybe_existing_arg(parser, dest, **kwargs):

@@ -21,15 +21,12 @@ class FeaturesReduction(str, Enum):
     MAX = "max"
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(kw_only=True)
 class LesionsNodesConfig:
     which_features: WhichFeatures
     feature_layer: int
     features_reduction: FeaturesReduction = FeaturesReduction.MEAN
     reinterpolation: tuple[int, int] | None = None
-
-    def to_dict(self) -> dict:
-        return dataclasses.asdict(self)
 
 
 # def extract_features_by_cc(cc, features, nlabel, reduce=None):

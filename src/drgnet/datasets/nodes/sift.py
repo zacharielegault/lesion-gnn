@@ -8,13 +8,10 @@ import torch
 from torch_geometric.data import Data
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(kw_only=True)
 class SiftNodesConfig:
     num_keypoints: int
     sigma: float
-
-    def to_dict(self) -> dict:
-        return dataclasses.asdict(self)
 
 
 class SiftExtractor:

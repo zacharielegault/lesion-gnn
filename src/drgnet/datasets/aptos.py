@@ -1,3 +1,4 @@
+import dataclasses
 from itertools import pairwise
 from pathlib import Path
 from typing import Iterator
@@ -5,7 +6,12 @@ from typing import Iterator
 import numpy as np
 import pandas as pd
 
-from .base import BaseDataset
+from .base import BaseDataset, BaseDatasetConfig
+
+
+@dataclasses.dataclass(kw_only=True)
+class AptosConfig(BaseDatasetConfig):
+    name: str = dataclasses.field(default="Aptos", init=False)
 
 
 class Aptos(BaseDataset):

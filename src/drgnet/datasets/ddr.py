@@ -1,16 +1,23 @@
+import dataclasses
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable, Iterator
+from typing import Iterator
 
 import pandas as pd
 
-from .base import BaseDataset, LesionsNodesConfig, SiftNodesConfig
+from .base import BaseDataset, BaseDatasetConfig
 
 
 class DDRVariant(str, Enum):
     TRAIN = "train"
     VALID = "valid"
     TEST = "test"
+
+
+@dataclasses.dataclass(kw_only=True)
+class DDRConfig(BaseDatasetConfig):
+    variant: DDRVariant
+    name: str = dataclasses.field(default="DDR", init=False)
 
 
 class DDR(BaseDataset):
@@ -38,6 +45,11 @@ class DDR(BaseDataset):
             └── valid.txt
     """
 
+    def __init__(self, config: DDRConfig):
+        assert config.variant in ["train", "valid", "test"]
+        self.variant = config.variant
+        super().__init__(config)
+
     @property
     def raw_file_names(self) -> list[str]:
         """A list of files in the `raw_dir` which needs to be found in order to skip the download."""
@@ -53,22 +65,6 @@ class DDR(BaseDataset):
     @property
     def dataset_name(self) -> str:
         return f"DDR_{self.variant}"
-
-    def __init__(
-        self,
-        *,
-        pre_transform_kwargs: SiftNodesConfig | LesionsNodesConfig,
-        root: str | None = None,
-        transform: Callable[..., Any] | None = None,
-        log: bool = True,
-        num_workers: int = 0,
-        variant: DDRVariant = DDRVariant.TRAIN,
-    ):
-        assert variant in ["train", "valid", "test"]
-        self.variant = variant
-        super().__init__(
-            root=root, pre_transform_kwargs=pre_transform_kwargs, transform=transform, log=log, num_workers=num_workers
-        )
 
     def _path_and_label_generator(self) -> Iterator[tuple[Path, int]]:
         for row in self._diagnosis.itertuples():

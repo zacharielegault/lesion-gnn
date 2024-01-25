@@ -59,9 +59,9 @@ class PointNet(torch.nn.Module):
         return self.mlp(x).log_softmax(dim=-1)
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(kw_only=True)
 class PointNetModelConfig(BaseModelConfig):
-    input_features: Placeholder[int]
+    input_features: Placeholder[int] = dataclasses.field(default_factory=Placeholder)
     pos_dim: int
     compile: bool = False
     name: str = dataclasses.field(default="PointNet", init=False)

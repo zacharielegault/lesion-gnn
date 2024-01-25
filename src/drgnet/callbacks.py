@@ -29,8 +29,9 @@ class ConfusionMatrixCallback(L.Callback):
         outputs: STEP_OUTPUT,
         batch: Any,
         batch_idx: int,
+        dataloader_idx: int = 0,
     ) -> None:
-        self.current_dataset = trainer.test_dataloaders.dataset.dataset_name
+        self.current_dataset = list(trainer.datamodule.test_datasets.keys())[dataloader_idx]
         self.test_predictions.append(outputs[0].cpu().numpy())
         self.test_groundtruth.append(outputs[1].cpu().numpy())
 

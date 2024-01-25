@@ -19,6 +19,7 @@ from drgnet.metrics import (
     ReferableDRPrecision,
     ReferableDRRecall,
 )
+from drgnet.utils import ClassWeights
 from drgnet.utils.placeholder import Placeholder
 
 
@@ -34,7 +35,7 @@ class LossType(str, Enum):
     SMOOTH_L1 = "SmoothL1"
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(kw_only=True)
 class OptimizerConfig:
     lr: float = 0.001
     schedule_warmup_epochs: int | None = 10  # Set to None to disable warmup
@@ -42,16 +43,17 @@ class OptimizerConfig:
     weight_decay: float = 0.01
     algo: OptimizerAlgo = OptimizerAlgo.ADAMW
     loss_type: LossType = LossType.CE
-    class_weights: torch.Tensor | None = None
+    class_weights_mode: ClassWeights = ClassWeights.UNIFORM
+    class_weights: Placeholder[torch.Tensor] = dataclasses.field(default_factory=Placeholder)
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(kw_only=True)
 class BaseModelConfig:
     """Default config for all models. When subclassing BaseLightningModule, a subclass of this config should be created
     as well.
     """
 
-    num_classes: Placeholder[int]
+    num_classes: Placeholder[int] = dataclasses.field(default_factory=Placeholder)
     optimizer: OptimizerConfig
     name: str
 
@@ -69,7 +71,7 @@ class BaseLightningModule(L.LightningModule):
             case LossType.SMOOTH_L1:
                 self.criterion = nn.SmoothL1Loss()
             case LossType.CE:
-                self.criterion = nn.CrossEntropyLoss(weight=config.optimizer.class_weights)
+                self.criterion = nn.CrossEntropyLoss(weight=config.optimizer.class_weights.value)
             case other:
                 raise ValueError(f"Invalid loss type: {other}")
 
@@ -96,34 +98,46 @@ class BaseLightningModule(L.LightningModule):
         return not self.is_regression
 
     def setup_metrics(self) -> None:
-        self.multiclass_metrics = MetricCollection(
+        self._multiclass_metrics_template = MetricCollection(
             {
                 "micro_acc": Accuracy(task="multiclass", num_classes=self.num_classes, average="micro"),
                 "kappa": CohenKappa(task="multiclass", num_classes=self.num_classes, weights="quadratic"),
                 "macro_f1": F1Score(task="multiclass", num_classes=self.num_classes, average="macro"),
                 "macro_precision": Precision(task="multiclass", num_classes=self.num_classes, average="macro"),
                 "macro_recall": Recall(task="multiclass", num_classes=self.num_classes, average="macro"),
-            },
-            prefix="val_",
+            }
         )
-        self.referable_metrics = MetricCollection(
+        self._referable_metrics_template = MetricCollection(
             {
                 "acc": ReferableDRAccuracy(),
                 "f1": ReferableDRF1(),
                 "precision": ReferableDRPrecision(),
                 "recall": ReferableDRRecall(),
-            },
-            prefix="val_referable_",
+            }
         )
 
         if self.is_probabilistic:
-            self.referable_metrics.add_metrics({"auroc": ReferableDRAUROC(), "auprc": ReferableDRAveragePrecision()})
+            self._referable_metrics_template.add_metrics(
+                {
+                    "auroc": ReferableDRAUROC(),
+                    "auprc": ReferableDRAveragePrecision(),
+                }
+            )
 
-        self.aptos_multiclass_metrics = self.multiclass_metrics.clone(prefix="test_aptos_")
-        self.ddr_multiclass_metrics = self.multiclass_metrics.clone(prefix="test_ddr_")
+        self._multiclass_metrics: dict[str, MetricCollection] = dict()
+        self._referable_metrics: dict[str, MetricCollection] = dict()
 
-        self.aptos_referable_metrics = self.referable_metrics.clone(prefix="test_referable_aptos_")
-        self.ddr_referable_metrics = self.referable_metrics.clone(prefix="test_referable_ddr_")
+    def multiclass_metrics(self, stage: str, dataset_name: str) -> MetricCollection:
+        prefix = f"{stage}_{dataset_name}_"
+        if prefix not in self._multiclass_metrics:
+            self._multiclass_metrics[prefix] = self._multiclass_metrics_template.clone(prefix=prefix)
+        return self._multiclass_metrics[prefix]
+
+    def referable_metrics(self, stage: str, dataset_name: str) -> MetricCollection:
+        prefix = f"{stage}_{dataset_name}_"
+        if prefix not in self._referable_metrics:
+            self._referable_metrics[prefix] = self._referable_metrics_template.clone(prefix=prefix)
+        return self._referable_metrics[prefix]
 
     def configure_optimizers(self) -> torch.optim.Optimizer | dict[str, Any]:
         match self.optimizer_algo:
@@ -176,33 +190,32 @@ class BaseLightningModule(L.LightningModule):
         self.log("train_loss", loss, batch_size=batch.num_graphs, on_step=False, on_epoch=True)
         return loss
 
-    def validation_step(self, batch: Data, batch_idx: int) -> None:
+    def validation_step(self, batch: Data, batch_idx: int, dataloader_idx: int = 0) -> None:
         logits = self(batch)
         loss = self.criterion(logits, batch.y)
         logits = self.logits_to_preds(logits)
 
-        self.log("val_loss", loss, batch_size=batch.num_graphs)
+        dataset_name = list(self.trainer.datamodule.val_datasets.keys())[dataloader_idx]
+        multiclass_metrics = self.multiclass_metrics("val", dataset_name)
+        referable_metrics = self.referable_metrics("val", dataset_name)
 
-        self.log_dict(
-            self.multiclass_metrics(logits, batch.y), batch_size=batch.num_graphs, on_step=False, on_epoch=True
-        )
-        self.log_dict(
-            self.referable_metrics(logits, batch.y), batch_size=batch.num_graphs, on_step=False, on_epoch=True
-        )
+        logging_kwargs = dict(batch_size=batch.num_graphs, on_step=False, on_epoch=True, add_dataloader_idx=False)
+        self.log(f"val_{dataset_name}_loss", loss, **logging_kwargs)
+        self.log_dict(multiclass_metrics(logits, batch.y), **logging_kwargs)
+        self.log_dict(referable_metrics(logits, batch.y), **logging_kwargs)
 
-    def test_step(self, batch: Data, batch_idx: int) -> None:
+    def test_step(self, batch: Data, batch_idx: int, dataloader_idx: int = 0) -> None:
         logits = self(batch)
         logits = self.logits_to_preds(logits)
-        dataset_name = self.trainer.test_dataloaders.dataset.dataset_name
-        if dataset_name == "Aptos":
-            multiclass_metric = self.aptos_multiclass_metrics
-            referable_metric = self.aptos_referable_metrics
-        elif dataset_name == "DDR_test":
-            multiclass_metric = self.ddr_multiclass_metrics
-            referable_metric = self.ddr_referable_metrics
 
-        self.log_dict(multiclass_metric(logits, batch.y), batch_size=batch.num_graphs, on_step=False, on_epoch=True)
-        self.log_dict(referable_metric(logits, batch.y), batch_size=batch.num_graphs, on_step=False, on_epoch=True)
+        dataset_name = list(self.trainer.datamodule.test_datasets.keys())[dataloader_idx]
+        multiclass_metrics = self.multiclass_metrics("test", dataset_name)
+        referable_metrics = self.referable_metrics("test", dataset_name)
+
+        logging_kwargs = dict(batch_size=batch.num_graphs, on_step=False, on_epoch=True, add_dataloader_idx=False)
+        self.log_dict(multiclass_metrics(logits, batch.y), **logging_kwargs)
+        self.log_dict(referable_metrics(logits, batch.y), **logging_kwargs)
+
         if not self.is_regression:
             return torch.argmax(logits, dim=1), batch.y
         else:

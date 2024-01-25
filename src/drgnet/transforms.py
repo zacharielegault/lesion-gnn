@@ -1,10 +1,26 @@
+import dataclasses
 import math
 import warnings
 from enum import Enum
+from typing import Any
 
 import torch
+import torch_geometric.transforms
 from torch_geometric.data import Data
 from torch_geometric.transforms import BaseTransform
+
+
+@dataclasses.dataclass(kw_only=True)
+class TransformConfig:
+    name: str
+    kwargs: dict[str, Any] = dataclasses.field(default_factory=dict)
+
+
+def get_transform(config: TransformConfig) -> BaseTransform:
+    if config.name == "GaussianDistance":
+        return GaussianDistance(**config.kwargs)
+    else:
+        return getattr(torch_geometric.transforms, config.name)(**config.kwargs)
 
 
 class SaveAs(Enum):

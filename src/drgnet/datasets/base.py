@@ -1,52 +1,50 @@
+import dataclasses
 import os.path as osp
-from enum import Enum
-from typing import Any, Callable
+from pathlib import Path
+from typing import Any, Callable, Iterator
 
 import torch
 from torch_geometric.data import InMemoryDataset
 from torch_geometric.data.dataset import _get_flattened_data_list
 from tqdm import tqdm
 
+from drgnet.utils import ClassWeights
+
 from .nodes.lesions import LesionsExtractor, LesionsNodesConfig
 from .nodes.sift import SiftExtractor, SiftNodesConfig
 
 
-class ClassWeights(str, Enum):
-    UNIFORM = "uniform"
-    INVERSE = "inverse"
-    QUADRATIC_INVERSE = "quadratic_inverse"
-    INVERSE_FREQUENCY = "inverse_frequency"
+@dataclasses.dataclass(kw_only=True)
+class BaseDatasetConfig:
+    name: str
+    root: str
+    nodes: LesionsNodesConfig | SiftNodesConfig
+    transform: Callable[..., Any] | None = None
+    log: bool = True
+    num_workers: int = 0
 
 
 class BaseDataset(InMemoryDataset):
-    def __init__(
-        self,
-        *,
-        root: str,
-        pre_transform_kwargs: SiftNodesConfig | LesionsNodesConfig,
-        transform: Callable[..., Any] | None = None,
-        log: bool = True,
-        num_workers: int = 0,
-    ):
-        assert num_workers >= 0
-        self.num_workers = num_workers
+    def __init__(self, config: BaseDatasetConfig):
+        assert config.num_workers >= 0
+        self.num_workers = config.num_workers
 
-        self.pre_transform_kwargs = pre_transform_kwargs
-        if isinstance(pre_transform_kwargs, SiftNodesConfig):
+        self.nodes_config = config.nodes
+        if isinstance(self.nodes_config, SiftNodesConfig):
             self.mode = "SIFT"
-            pre_transform = SiftExtractor(**pre_transform_kwargs.to_dict())
-        elif isinstance(pre_transform_kwargs, LesionsNodesConfig):
+            pre_transform = SiftExtractor(**dataclasses.asdict(self.nodes_config))
+        elif isinstance(self.nodes_config, LesionsNodesConfig):
             self.mode = "LESIONS"
-            pre_transform = LesionsExtractor(**pre_transform_kwargs.to_dict())
+            pre_transform = LesionsExtractor(**dataclasses.asdict(self.nodes_config))
         else:
-            raise ValueError(f"Invalid pre_transform_kwargs: {pre_transform_kwargs}")
+            raise ValueError(f"Invalid node config: {self.nodes_config}")
 
         super().__init__(
-            root=root,
-            transform=transform,
+            root=config.root,
+            transform=config.transform,
             pre_transform=pre_transform,
             pre_filter=None,
-            log=log,
+            log=config.log,
         )
         self.data, self.slices = torch.load(self.processed_paths[0])
 
@@ -59,11 +57,11 @@ class BaseDataset(InMemoryDataset):
     def processed_dir(self) -> str:
         path = osp.join(self.root, "processed", f"{self.dataset_name}", self.mode)
         if self.mode == "SIFT":
-            return osp.join(path, f"{self.pre_transform_kwargs.num_keypoints}")
+            return osp.join(path, f"{self.nodes_config.num_keypoints}")
         elif self.mode == "LESIONS":
             return osp.join(
                 path,
-                f"{self.pre_transform_kwargs.which_features}_{self.pre_transform_kwargs.feature_layer}",
+                f"{self.nodes_config.which_features}_{self.nodes_config.feature_layer}",
             )
         else:
             return super().processed_dir
@@ -85,18 +83,19 @@ class BaseDataset(InMemoryDataset):
 
     def get_class_weights(self, mode: ClassWeights = ClassWeights.INVERSE_FREQUENCY) -> torch.Tensor:
         counts = self.classes_counts
-        if mode == "uniform":
-            return torch.ones_like(counts)
-        elif mode == "inverse":
-            return 1 / counts
-        elif mode == "quadratic_inverse":
-            return 1 / counts**2
-        elif mode == "inverse_frequency":
-            n_samples = counts.sum()
-            n_classes = len(counts)
-            return n_samples / (n_classes * counts)
-        else:
-            raise ValueError(f"Invalid mode: {mode}")
+        match mode:
+            case ClassWeights.UNIFORM:
+                return torch.ones_like(counts)
+            case ClassWeights.INVERSE:
+                return 1 / counts
+            case ClassWeights.QUADRATIC_INVERSE:
+                return 1 / counts**2
+            case ClassWeights.INVERSE_FREQUENCY:
+                n_samples = counts.sum()
+                n_classes = len(counts)
+                return n_samples / (n_classes * counts)
+            case _:
+                raise ValueError(f"Invalid mode: {mode}")
 
     def process(self) -> None:
         """Process raw data and save it into the `processed_dir`."""
@@ -114,3 +113,6 @@ class BaseDataset(InMemoryDataset):
 
         data, slices = self.collate(graphs)
         torch.save((data, slices), self.processed_paths[0])
+
+    def _path_and_label_generator(self) -> Iterator[tuple[Path, int]]:
+        raise NotImplementedError
