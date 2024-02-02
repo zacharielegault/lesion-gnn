@@ -34,7 +34,7 @@ dev = [
     "pre-commit",
     "torch-tb-profiler",
 ]
-notebook = ["ipykernel", "matplotlib"]
+notebook = ["ipykernel", "matplotlib", "ipywidgets"]
 all = ["drgnet[dev, notebook]"]
 
 [build-system]
