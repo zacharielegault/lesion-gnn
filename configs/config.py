@@ -3,7 +3,7 @@ from drgnet.datasets.datamodule import DataConfig
 from drgnet.datasets.ddr import DDRConfig, DDRVariant
 from drgnet.datasets.nodes.lesions import LesionsNodesConfig, WhichFeatures
 from drgnet.models.base import LossType, OptimizerAlgo, OptimizerConfig
-from drgnet.models.pointnet import PointNetModelConfig
+from drgnet.models.gat import GATConfig
 from drgnet.transforms import TransformConfig
 from drgnet.utils import ClassWeights
 from drgnet.utils.config import Config
@@ -44,13 +44,12 @@ cfg = Config(
             ),
         ],
         transforms=[
-            TransformConfig(name="RadiusGraph", kwargs={"r": 3 * 50.0, "loop": True}),
-            TransformConfig(name="GaussianDistance", kwargs={"sigma": 50.0}),
+            TransformConfig(name="KNNGraph", kwargs={"k": 6, "loop": True}),
         ],
         batch_size=5000,
         num_workers=0,
     ),
-    model=PointNetModelConfig(
+    model=GATConfig(
         optimizer=OptimizerConfig(
             lr=1e-3,
             schedule_warmup_epochs=10,
@@ -59,7 +58,9 @@ cfg = Config(
             loss_type=LossType.CE,
             class_weights_mode=ClassWeights.INVERSE,
         ),
-        pos_dim=2,
+        hiddden_channels=[256, 256, 256],
+        heads=4,
+        dropout=0.5,
         compile=False,
     ),
     monitored_metric="val_DDR_kappa",
