@@ -11,6 +11,11 @@ pip install .
 train --config "configs/<config_name>.yaml"
 ```
 
+If you want to use the devcontainer, run the following commands:
+```bash
+devcontainer exec --workspace-folder . train --config configs/<config_name>.yaml
+```
+
 The [available config](configs) files currently are:
 - `aptos.yaml`
 - `ddr_aptos_lesions.yaml`
