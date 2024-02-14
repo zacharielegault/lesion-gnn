@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader
 from torchmetrics import Accuracy, CohenKappa, ConfusionMatrix, F1Score, MetricCollection, Precision, Recall
 from tqdm import tqdm
 
-from drgnet.fundus_datamodules import (
+from fundus_datamodules import (
     AptosClassificationDataModule,
     DDRSegmentationDataModule,
     MaplesSegmentationDataModule,

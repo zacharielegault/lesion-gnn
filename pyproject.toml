@@ -51,5 +51,5 @@ fixable = ["I", "RUF100", "TCH"]
 fix = true
 
 [tool.ruff.isort]
-known-first-party = ["drgnet"]
+known-first-party = ["drgnet", "fundus_datamodules", "masked_vit"]
 known-third-party = ["wandb"]
