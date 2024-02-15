@@ -41,15 +41,16 @@ all = ["drgnet[dev, notebook]"]
 requires = ["setuptools>=64.0"]
 build-backend = "setuptools.build_meta"
 
-[tool.black]
-line-length = 120
-
 [tool.ruff]
 line-length = 120
+
+[tool.ruff.lint]
 select = ["E", "F", "I", "RUF", "TCH"]
 fixable = ["I", "RUF100", "TCH"]
-fix = true
 
-[tool.ruff.isort]
+[tool.ruff.lint.isort]
 known-first-party = ["drgnet", "fundus_datamodules", "masked_vit"]
 known-third-party = ["wandb"]
+
+[tool.ruff.format]
+docstring-code-format = true
