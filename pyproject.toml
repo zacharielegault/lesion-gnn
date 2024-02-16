@@ -6,7 +6,6 @@ dependencies = [
     "numpy",
     "opencv-python-headless",
     "pandas",
-    "pydantic",
     "scikit-learn",
     "torch",
     "torch-geometric",
@@ -15,7 +14,6 @@ dependencies = [
     "tensorboard",
     "fundus_lesions_toolkit @ git+https://github.com/ClementPla/fundus-lesions-toolkit@main",
     "wandb",
-    "attrs",
     "albumentations",
     "lightning-bolts",
 ]
