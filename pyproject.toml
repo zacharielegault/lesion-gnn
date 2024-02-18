@@ -1,5 +1,5 @@
 [project]
-name = "drgnet"
+name = "lesion_gnn"
 version = "0.1.0"
 description = "DRG-NET: A graph neural network for computer-aided grading of diabetic retinopathy"
 dependencies = [
@@ -21,7 +21,7 @@ readme = "README.md"
 requires-python = ">=3.10" # Needed for type hinting with generics and "|" operator
 
 [project.scripts]
-train = "drgnet.scripts.train:main"
+train = "lesion_gnn.scripts.train:main"
 
 [project.optional-dependencies]
 dev = [
@@ -33,7 +33,7 @@ dev = [
     "torch-tb-profiler",
 ]
 notebook = ["ipykernel", "matplotlib", "ipywidgets"]
-all = ["drgnet[dev, notebook]"]
+all = ["lesion_gnn[dev, notebook]"]
 
 [build-system]
 requires = ["setuptools>=64.0"]
@@ -47,7 +47,7 @@ select = ["E", "F", "I", "RUF", "TCH"]
 fixable = ["I", "RUF100", "TCH"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["drgnet", "fundus_datamodules", "masked_vit"]
+known-first-party = ["lesion_gnn", "fundus_datamodules", "masked_vit"]
 known-third-party = ["wandb"]
 
 [tool.ruff.format]

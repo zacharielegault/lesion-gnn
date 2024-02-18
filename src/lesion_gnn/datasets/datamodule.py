@@ -7,8 +7,8 @@ import torch
 from torch_geometric.loader import DataLoader
 from torch_geometric.transforms import Compose, ToSparseTensor
 
-from drgnet.transforms import TransformConfig, get_transform
-from drgnet.utils import ClassWeights
+from lesion_gnn.transforms import TransformConfig, get_transform
+from lesion_gnn.utils import ClassWeights
 
 from .aptos import Aptos, AptosConfig
 from .base import BaseDataset

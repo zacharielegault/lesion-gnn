@@ -5,10 +5,10 @@ import wandb
 from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning.pytorch.loggers import WandbLogger
 
-from drgnet.callbacks import ConfusionMatrixCallback
-from drgnet.datasets.datamodule import DataModule
-from drgnet.models import get_model
-from drgnet.utils.config import Config
+from lesion_gnn.callbacks import ConfusionMatrixCallback
+from lesion_gnn.datasets.datamodule import DataModule
+from lesion_gnn.models import get_model
+from lesion_gnn.utils.config import Config
 
 
 def train(config: Config):

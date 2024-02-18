@@ -10,8 +10,8 @@ from torch_geometric.nn.aggr.utils import PoolingByMultiheadAttention as PMA
 from torch_geometric.nn.aggr.utils import SetAttentionBlock as SAB
 from torch_geometric.utils import to_dense_batch
 
-from drgnet.models.base import BaseLightningModule, BaseModelConfig
-from drgnet.utils.placeholder import Placeholder
+from lesion_gnn.models.base import BaseLightningModule, BaseModelConfig
+from lesion_gnn.utils.placeholder import Placeholder
 
 
 class SetTransformer(nn.Module):

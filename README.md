@@ -1,6 +1,4 @@
-# DRG-NET: A graph neural network for computer-aided grading of diabetic retinopathy
-
-A reimplemetation of the [article](https://rdcu.be/dnENc) by Salam et al. (2022). Given that the original code is not available, this project aims to reimplement the model and reproduce the results.
+# Lesion GNN
 
 ## Running the code
 To run the code, run the following commands:
@@ -8,17 +6,8 @@ To run the code, run the following commands:
 git clone
 cd DRG-NET
 pip install .
-train --config "configs/<config_name>.yaml"
+train --config "configs/<config_name>.py"
 ```
-
-If you want to use the devcontainer, run the following commands:
-```bash
-devcontainer exec --workspace-folder . train --config configs/<config_name>.yaml
-```
-
-The [available config](configs) files currently are:
-- `aptos.yaml`
-- `ddr_aptos_lesions.yaml`
 
 ## Contributing
 To contribute to the project, run the following commands:
@@ -28,13 +17,19 @@ cd DRG-NET
 pip install -e ".[all]"
 ```
 A [devcontainer](https://code.visualstudio.com/docs/devcontainers/containers) setup is also available for VSCode users.
+If you want to use the devcontainer to run experiments, install the [devcontainer cli](https://code.visualstudio.com/docs/devcontainers/devcontainer-cli)
+and run the following command:
+```bash
+devcontainer exec --workspace-folder . train --config configs/<config_name>.py
+```
 
 Make sure the [pre-commit hooks](https://pre-commit.com/) are installed:
 ```bash
 pre-commit install
 ```
 
-Test coverage is currently quite low. Any contributions to increase it are welcome. To run the tests, run the following command:
+Test coverage is currently quite low. Any contributions to increase it are welcome. To run the tests, run the following
+command:
 ```bash
-pytest --cov=drgnet
+pytest --cov=lesion_gnn
 ```

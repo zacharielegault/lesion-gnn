@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
-from drgnet.training import train
-from drgnet.utils.config import parse_args
+from lesion_gnn.training import train
+from lesion_gnn.utils.config import parse_args
 
 
 def main():

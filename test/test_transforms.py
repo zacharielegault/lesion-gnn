@@ -2,7 +2,7 @@ import pytest
 import torch
 from torch_geometric.data import Data
 
-from drgnet.transforms import GaussianDistance, SaveAs
+from lesion_gnn.transforms import GaussianDistance, SaveAs
 
 
 def test_gaussian_distance():

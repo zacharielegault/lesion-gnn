@@ -8,7 +8,7 @@ from torch_geometric.data import InMemoryDataset
 from torch_geometric.data.dataset import _get_flattened_data_list
 from tqdm import tqdm
 
-from drgnet.utils import ClassWeights
+from lesion_gnn.utils import ClassWeights
 
 from .nodes.lesions import LesionsExtractor, LesionsNodesConfig
 from .nodes.sift import SiftExtractor, SiftNodesConfig

@@ -1,12 +1,12 @@
-from drgnet.datasets.aptos import AptosConfig
-from drgnet.datasets.datamodule import DataConfig
-from drgnet.datasets.ddr import DDRConfig, DDRVariant
-from drgnet.datasets.nodes.lesions import LesionsNodesConfig, WhichFeatures
-from drgnet.models.base import LossType, LRSchedulerConfig, OptimizerAlgo, OptimizerConfig
-from drgnet.models.gat import GATConfig
-from drgnet.transforms import TransformConfig
-from drgnet.utils import ClassWeights
-from drgnet.utils.config import Config
+from lesion_gnn.datasets.aptos import AptosConfig
+from lesion_gnn.datasets.datamodule import DataConfig
+from lesion_gnn.datasets.ddr import DDRConfig, DDRVariant
+from lesion_gnn.datasets.nodes.lesions import LesionsNodesConfig, WhichFeatures
+from lesion_gnn.models.base import LossType, LRSchedulerConfig, OptimizerAlgo, OptimizerConfig
+from lesion_gnn.models.gat import GATConfig
+from lesion_gnn.transforms import TransformConfig
+from lesion_gnn.utils import ClassWeights
+from lesion_gnn.utils.config import Config
 
 __all__ = ["cfg"]
 

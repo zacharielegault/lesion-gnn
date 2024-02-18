@@ -9,9 +9,9 @@ import warnings
 from argparse import ArgumentParser
 from types import NoneType
 
-from drgnet.datasets.datamodule import DataConfig
-from drgnet.models import ModelConfig
-from drgnet.utils.placeholder import Placeholder
+from lesion_gnn.datasets.datamodule import DataConfig
+from lesion_gnn.models import ModelConfig
+from lesion_gnn.utils.placeholder import Placeholder
 
 
 @dataclasses.dataclass(kw_only=True)

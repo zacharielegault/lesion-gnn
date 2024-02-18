@@ -11,7 +11,7 @@ from torch_geometric.data import Data
 from torchmetrics import MetricCollection
 from torchmetrics.classification import Accuracy, CohenKappa, F1Score, Precision, Recall
 
-from drgnet.metrics import (
+from lesion_gnn.metrics import (
     ReferableDRAccuracy,
     ReferableDRAUROC,
     ReferableDRAveragePrecision,
@@ -19,8 +19,8 @@ from drgnet.metrics import (
     ReferableDRPrecision,
     ReferableDRRecall,
 )
-from drgnet.utils import ClassWeights
-from drgnet.utils.placeholder import Placeholder
+from lesion_gnn.utils import ClassWeights
+from lesion_gnn.utils.placeholder import Placeholder
 
 if TYPE_CHECKING:
     from torch.optim.lr_scheduler import LRScheduler

@@ -10,7 +10,7 @@ from torch_geometric.data import Data
 from torch_geometric.nn import GATConv, global_mean_pool
 from torch_sparse import SparseTensor
 
-from drgnet.utils.placeholder import Placeholder
+from lesion_gnn.utils.placeholder import Placeholder
 
 from .base import BaseLightningModule, BaseModelConfig
 

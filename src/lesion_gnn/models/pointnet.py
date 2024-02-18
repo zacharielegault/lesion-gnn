@@ -6,7 +6,7 @@ from torch import LongTensor, Tensor
 from torch_geometric.data import Data
 from torch_geometric.nn import MLP, PointNetConv, fps, global_max_pool, radius
 
-from drgnet.utils.placeholder import Placeholder
+from lesion_gnn.utils.placeholder import Placeholder
 
 from .base import BaseLightningModule, BaseModelConfig
 
