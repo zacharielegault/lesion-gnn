@@ -1,6 +1,6 @@
 import dataclasses
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any, Literal
 
 import lightning as L
 import torch
@@ -22,6 +22,9 @@ from drgnet.metrics import (
 from drgnet.utils import ClassWeights
 from drgnet.utils.placeholder import Placeholder
 
+if TYPE_CHECKING:
+    from torch.optim.lr_scheduler import LRScheduler
+
 
 class OptimizerAlgo(str, Enum):
     ADAM = "adam"
@@ -36,10 +39,28 @@ class LossType(str, Enum):
 
 
 @dataclasses.dataclass(kw_only=True)
+class LRSchedulerConfig:
+    """Configuration for a learning rate scheduler.
+
+    Args:
+        name: Name of the lr scheduler class
+        kwargs: Keyword arguments to pass to the lr scheduler, after the optimizer itself
+        monitor: Metric to monitor for schedulers that require it (e.g. ReduceLROnPlateau)
+        interval: Whether to step the lr scheduler after each epoch or each step
+        frequency: Step the lr scheduler every `frequency` intervals
+    """
+
+    name: str
+    kwargs: dict[str, Any]
+    monitor: str = "val_loss"
+    interval: Literal["epoch", "step"] = "epoch"
+    frequency: int = 1
+
+
+@dataclasses.dataclass(kw_only=True)
 class OptimizerConfig:
     lr: float = 0.001
-    schedule_warmup_epochs: int | None = 10  # Set to None to disable warmup
-    schedule_min_lr: float | None = 0.0  # Set to None to disable annealing
+    lr_scheduler: LRSchedulerConfig | None = None
     weight_decay: float = 0.01
     algo: OptimizerAlgo = OptimizerAlgo.ADAMW
     loss_type: LossType = LossType.CE
@@ -61,8 +82,7 @@ class BaseModelConfig:
 class BaseLightningModule(L.LightningModule):
     def __init__(self, config: BaseModelConfig) -> None:
         super().__init__()
-        self.warmup_epochs = config.optimizer.schedule_warmup_epochs
-        self.min_lr = config.optimizer.schedule_min_lr or config.optimizer.lr  # If None, disable annealing
+        self.lr_scheduler_config = config.optimizer.lr_scheduler
         self.loss_type = config.optimizer.loss_type
         self.num_classes = config.num_classes.value
         match config.optimizer.loss_type:
@@ -148,35 +168,24 @@ class BaseLightningModule(L.LightningModule):
             case OptimizerAlgo.SGD:
                 optimizer = torch.optim.SGD(self.parameters(), lr=self.lr, weight_decay=self.weight_decay)
 
-        if self.warmup_epochs is None or self.warmup_epochs == 0:
-            # If no warmup, use cosine annealing. If config.optimizer.schedule_min_lr was None, use self.lr as min_lr
-            # which means no annealing.
-            return {
-                "optimizer": optimizer,
-                "lr_scheduler": {
-                    "scheduler": torch.optim.lr_scheduler.CosineAnnealingLR(
-                        optimizer, T_max=self.trainer.max_epochs, eta_min=self.min_lr
-                    ),
-                    "interval": "epoch",
-                    "frequency": 1,
-                    "monitor": "val_loss",
-                },
-            }
+        if self.lr_scheduler_config is None:
+            return optimizer
+
+        if self.lr_scheduler_config.name == "LinearWarmupCosineAnnealingLR":
+            scheduler = LinearWarmupCosineAnnealingLR(optimizer, **self.lr_scheduler_config.kwargs)
         else:
-            return {
-                "optimizer": optimizer,
-                "lr_scheduler": {
-                    "scheduler": LinearWarmupCosineAnnealingLR(
-                        optimizer,
-                        warmup_epochs=self.warmup_epochs,
-                        max_epochs=self.trainer.max_epochs,
-                        eta_min=self.min_lr,
-                    ),
-                    "interval": "epoch",
-                    "frequency": 1,
-                    "monitor": "val_loss",
-                },
-            }
+            scheduler_cls: type[LRScheduler] = getattr(torch.optim.lr_scheduler, self.lr_scheduler_config.name)
+            scheduler = scheduler_cls(optimizer, **self.lr_scheduler_config.kwargs)
+
+        return {
+            "optimizer": optimizer,
+            "lr_scheduler": {
+                "scheduler": scheduler,
+                "monitor": self.lr_scheduler_config.monitor,
+                "interval": self.lr_scheduler_config.interval,
+                "frequency": self.lr_scheduler_config.frequency,
+            },
+        }
 
     def logits_to_preds(self, logits: Tensor) -> Tensor:
         if not self.is_regression:
