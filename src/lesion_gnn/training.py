@@ -34,7 +34,7 @@ def train(config: Config) -> dict[str, float]:
         project=config.project_name,
         settings=wandb.Settings(code_dir="."),
         entity="liv4d-polytechnique",
-        tags=[config.tag],
+        tags=config.tags,
         config=logged_args,
     )
     run_name = logger.experiment.name

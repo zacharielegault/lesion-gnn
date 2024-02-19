@@ -72,5 +72,5 @@ cfg = Config(
     max_epochs=MAX_EPOCHS,
     seed=1234,
     project_name="Aptos-GNN",
-    tag="LESIONS",
+    tags=["LESIONS"],
 )

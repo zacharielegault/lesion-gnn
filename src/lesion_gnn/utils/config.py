@@ -23,7 +23,7 @@ class Config:
     max_epochs: int
     seed: int
     project_name: str
-    tag: str
+    tags: list[str] | None = None
 
 
 def get_config(file_path: str | bytes | os.PathLike, module_name: str | None = None) -> Config:
