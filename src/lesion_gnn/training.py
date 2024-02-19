@@ -11,8 +11,7 @@ from lesion_gnn.models import get_model
 from lesion_gnn.utils.config import Config
 
 
-def train(config: Config):
-    print(config)
+def train(config: Config) -> dict[str, float]:
     L.seed_everything(config.seed)
 
     datamodule = DataModule(config.dataset, compile=config.model.compile)
@@ -24,6 +23,9 @@ def train(config: Config):
     )
     config.model.num_classes.value = datamodule.train_datasets.num_classes
     config.model.input_features.value = datamodule.train_datasets.num_features
+
+    print(config)
+
     model = get_model(config.model)
 
     logged_args = dataclasses.asdict(config)
@@ -56,4 +58,6 @@ def train(config: Config):
     trainer.fit(model, datamodule=datamodule)
 
     datamodule.setup("test")
-    trainer.test(model, datamodule=datamodule, ckpt_path="best")
+    out: list[dict[str, float]] = trainer.test(model, datamodule=datamodule, ckpt_path="best")
+    out = {k: v for d in out for k, v in d.items()}  # Flatten list of dicts
+    return out
