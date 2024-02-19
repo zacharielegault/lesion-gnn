@@ -2,7 +2,6 @@ import dataclasses
 
 import torch
 import torch.nn as nn
-import torch_geometric
 from torch import Tensor
 from torch_geometric.data import Data
 from torch_geometric.nn.aggr.utils import InducedSetAttentionBlock as ISAB
@@ -97,7 +96,7 @@ class SetTransformerLightning(BaseLightningModule):
             layer_norm=config.layer_norm,
             dropout=config.dropout,
         )
-        self.model = torch_geometric.compile(model, dynamic=True) if config.compile else model
+        self.model = torch.compile(model, dynamic=True) if config.compile else model
 
     def forward(self, data: Data) -> Tensor:
         logits = self.model(data.x, data.batch)

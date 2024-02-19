@@ -4,7 +4,6 @@ from itertools import pairwise
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torch_geometric
 from torch import LongTensor, Tensor
 from torch_geometric.data import Data
 from torch_geometric.nn import GATConv, global_mean_pool
@@ -54,7 +53,7 @@ class GATLightning(BaseLightningModule):
             heads=config.heads,
             dropout=config.dropout,
         )
-        self.model = torch_geometric.compile(model, dynamic=True) if config.compile else model
+        self.model = torch.compile(model, dynamic=True) if config.compile else model
 
     def forward(self, data: Data) -> Tensor:
         if hasattr(data, "adj_t"):

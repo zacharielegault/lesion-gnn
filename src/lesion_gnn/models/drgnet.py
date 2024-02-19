@@ -3,7 +3,6 @@ from itertools import pairwise
 
 import torch
 import torch.nn.functional as F
-import torch_geometric
 from torch import Tensor, nn
 from torch_geometric.data import Data
 from torch_geometric.nn import MLP, GraphConv, SortAggregation
@@ -93,7 +92,7 @@ class DRGNetLightning(BaseLightningModule):
             num_classes=1 if self.is_regression else config.num_classes.value,
             conv_hidden_dims=config.conv_hidden_dims,
         )
-        self.model = torch_geometric.compile(model, dynamic=True) if config.compile else model
+        self.model = torch.compile(model, dynamic=True) if config.compile else model
 
     def forward(self, data: Data) -> Tensor:
         if hasattr(data, "adj_t"):

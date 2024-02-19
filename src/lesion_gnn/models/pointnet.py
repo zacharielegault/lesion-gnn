@@ -1,7 +1,6 @@
 import dataclasses
 
 import torch
-import torch_geometric
 from torch import LongTensor, Tensor
 from torch_geometric.data import Data
 from torch_geometric.nn import MLP, PointNetConv, fps, global_max_pool, radius
@@ -75,7 +74,7 @@ class PointNetLightning(BaseLightningModule):
             pos_dim=config.pos_dim,
             num_classes=1 if self.is_regression else config.num_classes.value,
         )
-        self.model = torch_geometric.compile(model, dynamic=True) if config.compile else model
+        self.model = torch.compile(model, dynamic=True) if config.compile else model
 
     def forward(self, data: Data) -> Tensor:
         logits = self.model(data.x, data.pos, data.batch)
