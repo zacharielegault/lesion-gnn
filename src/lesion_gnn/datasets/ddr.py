@@ -53,7 +53,7 @@ class DDR(BaseDataset):
     @property
     def raw_file_names(self) -> list[str]:
         """A list of files in the `raw_dir` which needs to be found in order to skip the download."""
-        return [f"{self.variant}.txt"]
+        return [f"{self.variant.value}.txt"]
 
     @property
     def _diagnosis(self) -> pd.DataFrame:
@@ -64,11 +64,11 @@ class DDR(BaseDataset):
 
     @property
     def dataset_name(self) -> str:
-        return f"DDR_{self.variant}"
+        return f"DDR_{self.variant.value}"
 
     def _path_and_label_generator(self) -> Iterator[tuple[Path, int]]:
         for row in self._diagnosis.itertuples():
-            path = Path(self.raw_dir) / self.variant / row.filename
+            path = Path(self.raw_dir) / self.variant.value / row.filename
             label = row.diagnosis
             if label > 4:
                 continue
