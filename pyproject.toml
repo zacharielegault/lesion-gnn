@@ -16,12 +16,14 @@ dependencies = [
     "wandb",
     "albumentations",
     "lightning-bolts",
+    "optuna",
 ]
 readme = "README.md"
 requires-python = ">=3.10" # Needed for type hinting with generics and "|" operator
 
 [project.scripts]
 train = "lesion_gnn.scripts.train:main"
+sweep = "lesion_gnn.scripts.sweep:main"
 
 [project.optional-dependencies]
 dev = [
