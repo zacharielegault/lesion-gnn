@@ -82,7 +82,9 @@ class LesionsExtractor:
             raise ImportError("Please install fundus-lesions-toolkit from the corresponding github repository")
 
         img = cv2.imread(str(img_path))
-        assert img is not None
+        if img is None:
+            raise RuntimeError(f"Could not read image {img_path}")
+
         img = img[:, :, ::-1]  # BGR to RGB but much faster than cvtColor (x7020)
         labelMap, fmap, decoder_fmap = segment(
             img,

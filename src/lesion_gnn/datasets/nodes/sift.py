@@ -41,7 +41,9 @@ class SiftExtractor:
                 - `name` (str): image name
         """
         img = cv2.imread(str(img_path))
-        assert img is not None
+        if img is None:
+            raise RuntimeError(f"Could not read image {img_path}")
+
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
         # Turn off the thresholding and keep the top `num_keypoints` keypoints.
