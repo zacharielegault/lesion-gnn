@@ -195,13 +195,15 @@ class BaseLightningModule(L.LightningModule):
 
     def training_step(self, batch: Data, batch_idx: int) -> Tensor:
         logits = self(batch)
-        loss = self.criterion(logits, batch.y)
+        y = batch.y.float() if self.is_regression else batch.y
+        loss = self.criterion(logits, y)
         self.log("train_loss", loss, batch_size=batch.num_graphs, on_step=False, on_epoch=True)
         return loss
 
     def validation_step(self, batch: Data, batch_idx: int, dataloader_idx: int = 0) -> None:
         logits = self(batch)
-        loss = self.criterion(logits, batch.y)
+        y = batch.y.float() if self.is_regression else batch.y
+        loss = self.criterion(logits, y)
         logits = self.logits_to_preds(logits)
 
         dataset_name = list(self.trainer.datamodule.val_datasets.keys())[dataloader_idx]
