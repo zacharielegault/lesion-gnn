@@ -20,6 +20,7 @@ class Config:
     model: ModelConfig
     monitored_metric: str
     monitor_mode: str
+    early_stopping_patience: int | None = None
     max_epochs: int
     seed: int
     project_name: str

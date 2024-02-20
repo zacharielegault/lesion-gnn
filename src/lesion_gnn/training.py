@@ -2,7 +2,7 @@ import dataclasses
 
 import lightning as L
 import wandb
-from lightning.pytorch.callbacks import ModelCheckpoint
+from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
 from lightning.pytorch.loggers import WandbLogger
 
 from lesion_gnn.callbacks import ConfusionMatrixCallback
@@ -39,21 +39,31 @@ def train(config: Config) -> dict[str, float]:
     )
     run_name = logger.experiment.name
 
+    callbacks = [
+        ModelCheckpoint(
+            dirpath=f"checkpoints/{run_name}/",
+            monitor=config.monitored_metric,
+            mode=config.monitor_mode,
+            save_last=True,
+            save_top_k=1,
+        ),
+        ConfusionMatrixCallback(),
+    ]
+    if config.early_stopping_patience is not None:
+        callbacks.append(
+            EarlyStopping(
+                monitor=config.monitored_metric,
+                mode=config.monitor_mode,
+                patience=config.early_stopping_patience,
+            )
+        )
+
     trainer = L.Trainer(
         devices=[0],
         max_epochs=config.max_epochs,
         logger=logger,
         check_val_every_n_epoch=10,
-        callbacks=[
-            ModelCheckpoint(
-                dirpath=f"checkpoints/{run_name}/",
-                monitor=config.monitored_metric,
-                mode=config.monitor_mode,
-                save_last=True,
-                save_top_k=1,
-            ),
-            ConfusionMatrixCallback(),
-        ],
+        callbacks=callbacks,
     )
     trainer.fit(model, datamodule=datamodule)
 
