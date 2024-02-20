@@ -35,7 +35,7 @@ class GAT(nn.Module):
 
 @dataclasses.dataclass(kw_only=True)
 class GATConfig(BaseModelConfig):
-    input_features: Placeholder[int] = dataclasses.field(default_factory=Placeholder)
+    input_features: Placeholder[int] = dataclasses.field(default_factory=Placeholder, init=False)
     hiddden_channels: list[int]
     heads: int
     dropout: float

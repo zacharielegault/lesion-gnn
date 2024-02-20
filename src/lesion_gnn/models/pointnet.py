@@ -60,7 +60,7 @@ class PointNet(torch.nn.Module):
 
 @dataclasses.dataclass(kw_only=True)
 class PointNetModelConfig(BaseModelConfig):
-    input_features: Placeholder[int] = dataclasses.field(default_factory=Placeholder)
+    input_features: Placeholder[int] = dataclasses.field(default_factory=Placeholder, init=False)
     pos_dim: int
     compile: bool = False
     name: str = dataclasses.field(default="PointNet", init=False)

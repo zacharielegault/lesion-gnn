@@ -71,7 +71,7 @@ class DRGNet(nn.Module):
 
 @dataclasses.dataclass(kw_only=True)
 class DRGNetModelConfig(BaseModelConfig):
-    input_features: Placeholder[int] = dataclasses.field(default_factory=Placeholder)
+    input_features: Placeholder[int] = dataclasses.field(default_factory=Placeholder, init=False)
     gnn_hidden_dim: int
     num_layers: int
     sortpool_k: int

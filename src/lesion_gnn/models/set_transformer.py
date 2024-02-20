@@ -68,7 +68,7 @@ class SetTransformer(nn.Module):
 
 @dataclasses.dataclass(kw_only=True)
 class SetTransformerModelConfig(BaseModelConfig):
-    input_features: Placeholder[int] = dataclasses.field(default_factory=Placeholder)
+    input_features: Placeholder[int] = dataclasses.field(default_factory=Placeholder, init=False)
     inner_dim: int
     num_inducing_points: int
     num_seed_points: int

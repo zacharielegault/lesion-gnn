@@ -65,7 +65,7 @@ class OptimizerConfig:
     algo: OptimizerAlgo = OptimizerAlgo.ADAMW
     loss_type: LossType = LossType.CE
     class_weights_mode: ClassWeights = ClassWeights.UNIFORM
-    class_weights: Placeholder[torch.Tensor] = dataclasses.field(default_factory=Placeholder)
+    class_weights: Placeholder[torch.Tensor] = dataclasses.field(default_factory=Placeholder, init=False)
 
 
 @dataclasses.dataclass(kw_only=True)
@@ -74,7 +74,7 @@ class BaseModelConfig:
     as well.
     """
 
-    num_classes: Placeholder[int] = dataclasses.field(default_factory=Placeholder)
+    num_classes: Placeholder[int] = dataclasses.field(default_factory=Placeholder, init=False)
     optimizer: OptimizerConfig
     name: str
 
