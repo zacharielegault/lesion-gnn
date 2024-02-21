@@ -9,7 +9,7 @@
         "all",
         "--shm-size=4g"
     ],
-    "postCreateCommand": "pip install -e '.[all]'; pip install -e ./fundus-datamodules; pip install -e ./masked-vit",
+    "postCreateCommand": "./install.sh",
     "customizations": {
         "vscode": {
             "extensions": [
