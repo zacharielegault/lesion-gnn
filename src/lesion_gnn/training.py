@@ -12,6 +12,8 @@ from lesion_gnn.utils.config import Config
 
 
 def train(config: Config) -> dict[str, float]:
+    VALIDATION_INTERVAL = 10
+
     L.seed_everything(config.seed)
 
     datamodule = DataModule(config.dataset, compile=config.model.compile)
@@ -54,7 +56,7 @@ def train(config: Config) -> dict[str, float]:
             EarlyStopping(
                 monitor=config.monitored_metric,
                 mode=config.monitor_mode,
-                patience=config.early_stopping_patience,
+                patience=config.early_stopping_patience // VALIDATION_INTERVAL,
             )
         )
 
@@ -62,7 +64,8 @@ def train(config: Config) -> dict[str, float]:
         devices=[0],
         max_epochs=config.max_epochs,
         logger=logger,
-        check_val_every_n_epoch=10,
+        check_val_every_n_epoch=VALIDATION_INTERVAL,
+        log_every_n_steps=len(datamodule.train_dataloader()),
         callbacks=callbacks,
     )
     trainer.fit(model, datamodule=datamodule)
