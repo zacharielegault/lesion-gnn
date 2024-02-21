@@ -38,8 +38,11 @@ notebook = ["ipykernel", "matplotlib", "ipywidgets"]
 all = ["lesion_gnn[dev, notebook]"]
 
 [build-system]
-requires = ["setuptools>=64.0"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [tool.ruff]
 line-length = 120
