@@ -46,8 +46,7 @@ class DDR(BaseDataset):
     """
 
     def __init__(self, config: DDRConfig):
-        assert config.variant in ["train", "valid", "test"]
-        self.variant = config.variant
+        self.variant = DDRVariant(config.variant)
         super().__init__(config)
 
     @property

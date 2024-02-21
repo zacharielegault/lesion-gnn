@@ -97,7 +97,7 @@ class BaseLightningModule(L.LightningModule):
 
         self.lr = config.optimizer.lr
         self.weight_decay = config.optimizer.weight_decay
-        self.optimizer_algo = config.optimizer.algo
+        self.optimizer_algo = OptimizerAlgo(config.optimizer.algo)
 
         self.setup_metrics()
 

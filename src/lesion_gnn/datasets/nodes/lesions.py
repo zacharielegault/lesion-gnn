@@ -59,14 +59,10 @@ class LesionsExtractor:
         compile=True,
         reinterpolation: tuple[int, int] | None = None,
     ):
-        assert which_features in [
-            "decoder",
-            "encoder",
-        ], f"which_features must be either 'decoder' or 'encoder', got {which_features}"
-        self.which_features = which_features
+        self.which_features = WhichFeatures(which_features)
         self.feature_layer = feature_layer
         self.device = torch.device("cuda" if cuda_is_available() else "cpu")
-        self.features_reduction = features_reduction
+        self.features_reduction = FeaturesReduction(features_reduction)
         self.reinterpolation = reinterpolation
         if compile:
             # Does not seem to be faster and mode="reduced overhead" crashes after a few iterations
