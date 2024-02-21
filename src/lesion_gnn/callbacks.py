@@ -3,6 +3,8 @@ from typing import Any
 import lightning as L
 import numpy as np
 import wandb
+from lightning.pytorch.callbacks import BatchSizeFinder as _BatchSizeFinder
+from lightning.pytorch.utilities.exceptions import MisconfigurationException
 from lightning.pytorch.utilities.types import STEP_OUTPUT
 
 from lesion_gnn.models.base import BaseLightningModule
@@ -42,3 +44,24 @@ class ConfusionMatrixCallback(L.Callback):
             class_names=self.labels,
         )
         wandb.log({f"Confusion_Matrix_{self.current_dataset}": cm})
+
+
+class BatchSizeFinder(_BatchSizeFinder):
+    def setup(self, trainer: L.Trainer, pl_module: L.LightningModule, stage: str | None = None) -> None:
+        try:
+            super().setup(trainer, pl_module, stage)
+        except MisconfigurationException as e:
+            # FIXME: This is kind of a hack, but the BatchSizeFinder cannot be used with multiple val/test/predict
+            # dataloaders
+            if "The Batch size finder cannot be used with multiple" in str(e):
+                return
+            raise e
+
+    def on_validation_start(self, *args, **kwargs) -> None:
+        return
+
+    def on_test_start(self, *args, **kwargs) -> None:
+        return
+
+    def on_predict_start(self, *args, **kwargs) -> None:
+        return

@@ -5,7 +5,7 @@ import wandb
 from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
 from lightning.pytorch.loggers import WandbLogger
 
-from lesion_gnn.callbacks import ConfusionMatrixCallback
+from lesion_gnn.callbacks import BatchSizeFinder, ConfusionMatrixCallback
 from lesion_gnn.datasets.datamodule import DataModule
 from lesion_gnn.models import get_model
 from lesion_gnn.utils.config import Config
@@ -50,6 +50,7 @@ def train(config: Config) -> dict[str, float]:
             save_top_k=1,
         ),
         ConfusionMatrixCallback(),
+        BatchSizeFinder(),
     ]
     if config.early_stopping_patience is not None:
         callbacks.append(

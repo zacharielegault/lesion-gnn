@@ -37,6 +37,7 @@ class DataConfig:
 class DataModule(L.LightningDataModule):
     def __init__(self, config: DataConfig, compile: bool = False):
         super().__init__()
+        self.batch_size = config.batch_size
         self.config = config
 
         transform = Compose([get_transform(config) for config in self.config.transforms])
@@ -62,20 +63,20 @@ class DataModule(L.LightningDataModule):
     def train_dataloader(self) -> DataLoader:
         return DataLoader(
             self.train_datasets,
-            batch_size=self.config.batch_size,
+            batch_size=self.batch_size,
             num_workers=self.config.num_workers,
             shuffle=True,
         )
 
     def val_dataloader(self) -> DataLoader:
         return {
-            name: DataLoader(dataset, batch_size=self.config.batch_size, num_workers=self.config.num_workers)
+            name: DataLoader(dataset, batch_size=self.batch_size, num_workers=self.config.num_workers)
             for name, dataset in self.val_datasets.items()
         }
 
     def test_dataloader(self) -> DataLoader:
         return {
-            name: DataLoader(dataset, batch_size=self.config.batch_size, num_workers=self.config.num_workers)
+            name: DataLoader(dataset, batch_size=self.batch_size, num_workers=self.config.num_workers)
             for name, dataset in self.test_datasets.items()
         }
 
