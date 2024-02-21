@@ -13,6 +13,7 @@ dependencies = [
     "torch",
     "timm",
     "fundus_lesions_toolkit @ git+https://github.com/ClementPla/fundus-lesions-toolkit@main",
+    "lightning",
 ]
 
 [tool.hatch.metadata]

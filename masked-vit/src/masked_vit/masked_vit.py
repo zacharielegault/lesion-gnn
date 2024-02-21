@@ -9,14 +9,15 @@ from timm.models._manipulate import checkpoint_seq
 from timm.models.vision_transformer import VisionTransformer as TimmViT
 
 
-class _VisionTransformer(TimmViT):
+class MaskedVisionTransformer(TimmViT):
     def forward_features(
         self,
         x: torch.Tensor,
         mask: torch.Tensor | None = None,
-        mode: Literal["mask", "index"] = "mask",
+        mode: Literal["mask", "index", "nan_replace"] = "mask",
         flip_mask: bool = False,
         compute_masks: bool = False,
+        keep_p: float = 0.0,
     ) -> torch.Tensor:
         if compute_masks and mask is not None:
             warnings.warn("compute_masks is True, but mask is not None. Ignoring compute_masks.")
@@ -38,6 +39,10 @@ class _VisionTransformer(TimmViT):
                 mask.to(x.dtype), (mask.shape[-2] // patch_size[-2], mask.shape[-1] // patch_size[-1])
             ).flatten(1)  # (B, H, W) -> (B, L)
 
+            if keep_p > 0:
+                # Keep a proportion `keep_p` of the background
+                ...
+
             if flip_mask:
                 mask = 1 - mask
 
@@ -46,6 +51,14 @@ class _VisionTransformer(TimmViT):
 
             if mode == "mask":
                 x = x * mask.unsqueeze(-1)
+            elif mode == "nan_replace":
+                warnings.warn("mode nan_replace does not work")
+                mask = mask.bool().unsqueeze(-1).expand(-1, -1, x.shape[-1])
+                x = torch.where(mask, x, torch.nan)
+            elif mode == "neg_inf_replace":
+                warnings.warn("mode neg_inf_replace does not work")
+                mask = mask.bool().unsqueeze(-1).expand(-1, -1, x.shape[-1])
+                x = torch.where(mask, x, -torch.inf)
             elif mode == "index":
                 idx = mask.nonzero(as_tuple=True)  # get the indices of tokens to keep
                 x_ = x.new_zeros(x.shape[0], idx[1].max() + 1, x.shape[-1])
@@ -69,16 +82,18 @@ class _VisionTransformer(TimmViT):
         mode: Literal["mask", "index"] = "mask",
         flip_mask: bool = False,
         compute_masks: bool = False,
+        keep_p: float = 0.0,
     ) -> torch.Tensor:
-        x = self.forward_features(x, mask, mode, flip_mask, compute_masks)
+        x = self.forward_features(x, mask, mode, flip_mask, compute_masks, keep_p)
         x = self.forward_head(x)
         return x
 
 
-timm.models.vision_transformer.VisionTransformer = _VisionTransformer  # Monkey patch timm to use our VisionTransformer
+# Monkey patch timm to use our VisionTransformer
+timm.models.vision_transformer.VisionTransformer = MaskedVisionTransformer
 
 
-def make_model():
+def make_model() -> MaskedVisionTransformer:
     path = "cosmic-capybara-16.ckpt"
     state_dict = torch.load(path, map_location="cpu")["state_dict"]
     for k in list(state_dict.keys()):
