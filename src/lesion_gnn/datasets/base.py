@@ -85,7 +85,7 @@ class BaseDataset(InMemoryDataset):
         counts = self.classes_counts
         match mode:
             case ClassWeights.UNIFORM:
-                return torch.ones_like(counts)
+                return torch.ones_like(counts).float()
             case ClassWeights.INVERSE:
                 return 1 / counts
             case ClassWeights.QUADRATIC_INVERSE:

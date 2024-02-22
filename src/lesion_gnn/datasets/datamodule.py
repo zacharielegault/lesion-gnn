@@ -104,7 +104,7 @@ class ConcatDataset(torch.utils.data.ConcatDataset):
 
         match mode:
             case ClassWeights.UNIFORM:
-                return torch.ones_like(class_counts)
+                return torch.ones_like(class_counts).float()
             case ClassWeights.INVERSE:
                 return 1 / class_counts
             case ClassWeights.QUADRATIC_INVERSE:
