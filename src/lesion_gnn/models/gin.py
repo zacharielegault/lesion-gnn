@@ -40,7 +40,7 @@ class GINConfig(BaseModelConfig):
     input_features: Placeholder[int] = dataclasses.field(default_factory=Placeholder, init=False)
     hidden_channels: list[int]
     dropout: float
-    compile: False
+    compile: bool
     name: str = dataclasses.field(default="GIN", init=False)
 
 

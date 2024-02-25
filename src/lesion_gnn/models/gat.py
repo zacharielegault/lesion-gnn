@@ -39,7 +39,7 @@ class GATConfig(BaseModelConfig):
     hiddden_channels: list[int]
     heads: int
     dropout: float
-    compile: False
+    compile: bool
     name: str = dataclasses.field(default="GAT", init=False)
 
 
