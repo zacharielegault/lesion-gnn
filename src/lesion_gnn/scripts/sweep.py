@@ -3,7 +3,7 @@ import sys
 
 import optuna
 import torch
-from optuna.integration.wandb import WeightsAndBiasesCallback  # noqa: F401
+from optuna.integration.wandb import WeightsAndBiasesCallback
 
 from lesion_gnn.datasets.aptos import AptosConfig
 from lesion_gnn.datasets.datamodule import DataConfig
@@ -18,7 +18,7 @@ from lesion_gnn.utils import ClassWeights
 from lesion_gnn.utils.config import Config
 
 PROJECT_NAME = "SweepLesionsGNN"
-# wandb_callback = WeightsAndBiasesCallback(wandb_kwargs={"project": PROJECT_NAME})
+wandb_callback = WeightsAndBiasesCallback(wandb_kwargs={"project": PROJECT_NAME}, as_multirun=True)
 
 
 def main():
@@ -37,7 +37,7 @@ def main():
     study.optimize(objective, n_trials=500)
 
 
-# @wandb_callback.track_in_wandb()
+@wandb_callback.track_in_wandb()
 def objective(trial):
     config = make_config(trial)
 
