@@ -6,7 +6,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch import LongTensor, Tensor
 from torch_geometric.data import Data
-from torch_geometric.nn import GATConv, global_mean_pool
+from torch_geometric.nn import GATConv, SetTransformerAggregation, global_mean_pool
 from torch_sparse import SparseTensor
 
 from lesion_gnn.utils.placeholder import Placeholder
@@ -15,20 +15,46 @@ from .base import BaseLightningModule, BaseModelConfig
 
 
 class GAT(nn.Module):
-    def __init__(self, input_features: int, hiddden_channels: list[int], num_classes: int, heads: int, dropout: float):
+    def __init__(
+        self,
+        input_features: int,
+        hiddden_channels: list[int],
+        num_classes: int,
+        heads: int,
+        dropout: float,
+        num_st_seed_points: int | None = None,
+    ):
         super().__init__()
         assert all(d % heads == 0 for d in hiddden_channels)
         self.in_proj = nn.Linear(input_features, hiddden_channels[0])
         self.convs = nn.ModuleList(
             [GATConv(d1, d2 // heads, heads=heads, dropout=dropout) for d1, d2 in pairwise(hiddden_channels)]
         )
+        if num_st_seed_points is not None:
+            self.st = SetTransformerAggregation(
+                channels=hiddden_channels[-1],
+                num_seed_points=hiddden_channels[-1] // heads,
+                num_encoder_blocks=2,
+                num_decoder_blocks=2,
+                heads=heads,
+                layer_norm=True,
+                dropout=dropout,
+                concat=False,
+            )
+        else:
+            self.st = None
         self.out_proj = nn.Linear(hiddden_channels[-1], num_classes)
 
     def forward(self, x: Tensor, edge_index: LongTensor | SparseTensor, batch: LongTensor) -> Tensor:
         x = self.in_proj(x)
         for conv in self.convs:
             x = F.elu(conv(x, edge_index))
-        x = global_mean_pool(x, batch)
+
+        if self.st is not None:
+            x = self.st(x, batch)
+        else:
+            x = global_mean_pool(x, batch)
+
         x = self.out_proj(x)
         return x
 
@@ -39,6 +65,7 @@ class GATConfig(BaseModelConfig):
     hiddden_channels: list[int]
     heads: int
     dropout: float
+    num_st_seed_points: int | None = None
     compile: bool
     name: str = dataclasses.field(default="GAT", init=False)
 
@@ -52,6 +79,7 @@ class GATLightning(BaseLightningModule):
             num_classes=1 if self.is_regression else config.num_classes.value,
             heads=config.heads,
             dropout=config.dropout,
+            num_st_seed_points=config.num_st_seed_points,
         )
         self.model = torch.compile(model, dynamic=True) if config.compile else model
 
