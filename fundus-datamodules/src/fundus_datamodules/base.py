@@ -4,10 +4,13 @@ from typing import Literal
 import albumentations as A
 import cv2
 import lightning as L
+import torch
 from albumentations.pytorch import ToTensorV2
 from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 from torch import Tensor
 from torch.utils.data import DataLoader, Dataset
+
+from lesion_gnn.utils import ClassWeights
 
 from .utils import FundusAutocrop
 
@@ -29,6 +32,28 @@ class FundusDataset(Dataset):
 class FundusClassificationDataset(FundusDataset):
     def __getitem__(self, index: int) -> tuple[Tensor, int]:
         raise NotImplementedError
+
+    @property
+    def classes_counts(self) -> torch.Tensor:
+        y = torch.cat([y for (x, y) in self], dim=0)
+        _, counts = torch.unique(y, return_counts=True)
+        return counts
+
+    def get_class_weights(self, mode: ClassWeights = ClassWeights.INVERSE_FREQUENCY) -> torch.Tensor:
+        counts = self.classes_counts
+        match mode:
+            case ClassWeights.UNIFORM:
+                return torch.ones_like(counts).float()
+            case ClassWeights.INVERSE:
+                return 1 / counts
+            case ClassWeights.QUADRATIC_INVERSE:
+                return 1 / counts**2
+            case ClassWeights.INVERSE_FREQUENCY:
+                n_samples = counts.sum()
+                n_classes = len(counts)
+                return n_samples / (n_classes * counts)
+            case _:
+                raise ValueError(f"Invalid mode: {mode}")
 
 
 class FundusSegmentationDataset(FundusDataset):
