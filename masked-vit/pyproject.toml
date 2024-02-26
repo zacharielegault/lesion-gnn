@@ -10,11 +10,15 @@ authors = [
     { name = "Zacharie Legault", email = "32556865+zacharielegault@users.noreply.github.com" },
 ]
 dependencies = [
-    "torch",
-    "timm",
+    "torch>=2.2.0",
+    "timm>=0.9.16",
     "fundus_lesions_toolkit @ git+https://github.com/ClementPla/fundus-lesions-toolkit@main",
-    "lightning",
+    "lightning>=2.2.0.post0",
+    "fundus-datamodules",
 ]
+
+[tool.rye]
+managed = true
 
 [tool.hatch.metadata]
 allow-direct-references = true

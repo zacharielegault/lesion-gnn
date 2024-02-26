@@ -1,5 +1,8 @@
 # Lesion GNN
 
+[![Rye](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/rye/main/artwork/badge.json)](https://rye-up.com)
+
+
 ## Running the code
 To run the code, run the following commands:
 ```bash

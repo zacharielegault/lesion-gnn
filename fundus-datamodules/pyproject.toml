@@ -10,11 +10,14 @@ authors = [
   { name = "Zacharie Legault", email = "32556865+zacharielegault@users.noreply.github.com" },
 ]
 dependencies = [
-  "torch",
-  "albumentations",
-  "opencv-python-headless",
-  "pandas",
-  "numpy",
-  "lightning",
-  "timm",
+  "torch>=2.2.0",
+  "albumentations>=1.4.0",
+  "opencv-python-headless>=4.9.0.80",
+  "pandas>=2.2.1",
+  "numpy>=1.26.4",
+  "lightning>=2.2.0.post0",
+  "timm>=0.9.16",
 ]
+
+[tool.rye]
+managed = true

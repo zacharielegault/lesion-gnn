@@ -10,12 +10,10 @@ authors = [
   { name = "Zacharie Legault", email = "32556865+zacharielegault@users.noreply.github.com" },
 ]
 dependencies = [
-  "torch",
-  "lightning",
-  "timm",
-  "lightning-bolts",
-  # "-e fundus-datamodules @ {root:uri}/../fundus-datamodules",
-  # "-e lesion-gnn @ {root:uri}/..",
+  "torch>=2.2.0",
+  "lightning>=2.2.0.post0",
+  "timm>=0.9.16",
+  "lightning-bolts>=0.7.0",
   "fundus-datamodules",
   "lesion-gnn",
 ]
