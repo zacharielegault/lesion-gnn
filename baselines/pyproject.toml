@@ -1,0 +1,27 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "baselines"
+version = "0.0.1"
+requires-python = ">=3.10"
+authors = [
+  { name = "Zacharie Legault", email = "32556865+zacharielegault@users.noreply.github.com" },
+]
+dependencies = [
+  "torch",
+  "lightning",
+  "timm",
+  "lightning-bolts",
+  # "-e fundus-datamodules @ {root:uri}/../fundus-datamodules",
+  # "-e lesion-gnn @ {root:uri}/..",
+  "fundus-datamodules",
+  "lesion-gnn",
+]
+
+[tool.rye]
+managed = true
+
+[tool.hatch.metadata]
+allow-direct-references = true
