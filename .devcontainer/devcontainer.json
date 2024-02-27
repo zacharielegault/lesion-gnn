@@ -1,5 +1,5 @@
 {
-    "name": "drg-net",
+    "name": "lesion-gnn",
     "build": {
         "dockerfile": "Dockerfile",
         "context": ".."

@@ -8,7 +8,7 @@
 To run the code, run the following commands:
 ```bash
 git clone
-cd DRG-NET
+cd lesion-gnn
 pip install .
 train --config "configs/<config_name>.py"
 ```
@@ -17,7 +17,7 @@ train --config "configs/<config_name>.py"
 To contribute to the project, run the following commands:
 ```bash
 git clone
-cd DRG-NET
+cd lesion-gnn
 pip install -e ".[all]"
 ```
 A [devcontainer](https://code.visualstudio.com/docs/devcontainers/containers) setup is also available for VSCode users.

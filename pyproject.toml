@@ -1,7 +1,7 @@
 [project]
 name = "lesion-gnn"
 version = "0.1.0"
-description = "DRG-NET: A graph neural network for computer-aided grading of diabetic retinopathy"
+description = "Ophtalmology with GNNs"
 dependencies = [
     "numpy>=1.26.4",
     "opencv-python-headless>=4.9.0.80",
