@@ -6,7 +6,7 @@ import wandb
 from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
 from lightning.pytorch.loggers import WandbLogger
 
-from baselines.timm import TimmConfig, TimmModel
+from baselines import TimmConfig, TimmModel
 from fundus_datamodules import DDRClassificationDataModule
 from lesion_gnn.callbacks import BatchSizeFinder, ConfusionMatrixCallback
 from lesion_gnn.models.base import LossType, OptimizerAlgo, OptimizerConfig
@@ -48,9 +48,7 @@ model_config = TimmConfig(
     ),
     name="resnet18",
 )
-model_config.optimizer.class_weights.value = datamodule.train.get_class_weights(
-    mode=model_config.optimizer.class_weights_mode
-)
+model_config.optimizer.class_weights.value = None  # FIXME: This is a hack to avoid computing the class counts
 model_config.num_classes.value = datamodule.train.num_classes
 
 model = TimmModel(model_config)
@@ -58,7 +56,7 @@ model = TimmModel(model_config)
 logger = WandbLogger(
     project=PROJECT_NAME,
     settings=wandb.Settings(code_dir="."),
-    entity="liv4d-polytechnique",
+    # entity="liv4d-polytechnique",
     tags=TAGS,
     config={
         "img_size": IMG_SIZE,

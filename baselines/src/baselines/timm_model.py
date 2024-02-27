@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
 @dataclasses.dataclass(kw_only=True)
 class TimmConfig(BaseModelConfig):
-    pass
+    compile: bool = False
 
 
 class TimmModel(L.LightningModule):
@@ -35,7 +35,7 @@ class TimmModel(L.LightningModule):
         self.lr_scheduler_config = config.optimizer.lr_scheduler
         self.loss_type = config.optimizer.loss_type
         self.num_classes = config.num_classes.value
-        match config.loss_type:
+        match config.optimizer.loss_type:
             case LossType.MSE:
                 self.criterion = nn.MSELoss()
             case LossType.SMOOTH_L1:
@@ -50,7 +50,8 @@ class TimmModel(L.LightningModule):
         self.optimizer_algo = config.optimizer.algo
 
         self.setup_metrics()
-        self.model = timm.create_model(config.name, pretrained=True, num_classes=config.num_classes.value)
+        model = timm.create_model(config.name, pretrained=True, num_classes=config.num_classes.value)
+        self.model = torch.compile(model) if config.compile else model
 
     def setup_metrics(self) -> None:
         self._multiclass_metrics_template = MetricCollection(
