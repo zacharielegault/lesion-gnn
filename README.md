@@ -1,7 +1,8 @@
 # Lesion GNN
 
 [![Rye](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/rye/main/artwork/badge.json)](https://rye-up.com)
-
+[![PyTorch](https://img.shields.io/badge/PyTorch_2.2.0+-ee4c2c?logo=pytorch&logoColor=white)](https://pytorch.org/docs/stable/index.html)
+[![Lightning](https://img.shields.io/badge/Lightning_2.2.0+-792ee5?logo=lightning&logoColor=white)](https://lightning.ai/docs/pytorch/stable/)
 
 ## Running the code
 To run the code, run the following commands:
