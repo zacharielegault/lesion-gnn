@@ -15,6 +15,7 @@ dependencies = [
     "fundus_lesions_toolkit @ git+https://github.com/ClementPla/fundus-lesions-toolkit@main",
     "lightning>=2.2.0.post0",
     "fundus-datamodules",
+    "matplotlib",
 ]
 
 [tool.rye]
