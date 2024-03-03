@@ -1,3 +1,7 @@
+<p align="center">
+    <img src="assets/header.png" width="800px"/>
+</p>
+
 # Lesion GNN
 
 [![Rye](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/rye/main/artwork/badge.json)](https://rye-up.com)
