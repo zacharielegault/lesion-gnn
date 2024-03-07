@@ -40,7 +40,13 @@ managed = true
 dev-dependencies = ["pytest>=8.0.2", "pytest-cov>=4.1.0", "pre-commit>=3.6.2"]
 
 [tool.rye.workspace]
-members = [".", "fundus-datamodules", "masked-vit", "baselines"]
+members = [
+    ".",
+    "fundus-datamodules",
+    "masked-vit",
+    "baselines",
+    "lesion-aware-transformer",
+]
 
 [[tool.rye.sources]]
 name = "pyg"
@@ -59,7 +65,12 @@ select = ["E", "F", "I", "RUF", "TCH"]
 fixable = ["I", "RUF100", "TCH"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["lesion_gnn", "fundus_datamodules", "masked_vit"]
+known-first-party = [
+    "lesion_gnn",
+    "fundus_datamodules",
+    "masked_vit",
+    "lesion_aware_transformer",
+]
 known-third-party = ["wandb"]
 
 [tool.ruff.format]
