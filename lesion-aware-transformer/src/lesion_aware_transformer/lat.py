@@ -1,9 +1,11 @@
 import einops
 import lightning as L
 import timm
+import timm.optim
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torch_geometric
 import torch_scatter
 from torch import Tensor
 from torchmetrics import MetricCollection
@@ -127,12 +129,21 @@ class LesionAwareTransformer(L.LightningModule):
         triplet_margin: float = 1.0,  # TODO: figure out a good default value
         w_triplet: float = 0.04,
         w_consistency: float = 0.01,
+        optimizer: str = "adamw",
+        lr: float = 1e-4,
+        weight_decay: float = 1e-4,
+        optimizer_kwargs: dict | None = None,
     ) -> None:
         super().__init__()
         self.num_classes = num_classes
         self.triplet_margin = triplet_margin
         self.w_consistency = w_consistency
         self.w_triplet = w_triplet
+
+        self.optimizer = optimizer
+        self.lr = lr
+        self.weight_decay = weight_decay
+        self.optimizer_kwargs = optimizer_kwargs or {}
 
         self.backbone = timm.create_model(backbone, pretrained=pretrained, features_only=True, out_indices=(-1,))
         self.pixel_relation_encoder = PixelRelationEncoder(
@@ -179,8 +190,27 @@ class LesionAwareTransformer(L.LightningModule):
         return self.metrics[prefix]
 
     def configure_optimizers(self) -> torch.optim.Optimizer:
-        optimizer = torch.optim.AdamW(self.parameters(), lr=1e-4, weight_decay=1e-4)
-        return optimizer
+        try:
+            # Try to resolve the optimizer from torch_geometric, which looks for the optimizer in torch.optim
+            optimizer = torch_geometric.nn.resolver.optimizer_resolver(
+                self.optimizer, self.parameters(), lr=self.lr, weight_decay=self.weight_decay, **self.optimizer_kwargs
+            )
+            return optimizer
+        except ValueError:
+            pass
+
+        try:
+            # Otherwise, try to resolve the optimizer from timm, which has its own optimizers
+            optimizer = timm.optim.create_optimizer_v2(
+                self.parameters(), self.optimizer, lr=self.lr, weight_decay=self.weight_decay, **self.optimizer_kwargs
+            )
+            return optimizer
+        except AssertionError:  # timm.optim.create_optimizer_v2 raises an AssertionError if the optimizer is not found
+            print(self.optimizer, "not found in timm.optim.create_optimizer_v2")
+            pass
+
+        # If all else fails, raise an error
+        raise ValueError(f"Could not resolve optimizer '{self.optimizer}'")
 
     def forward(self, img: Tensor, need_maps: bool = False) -> tuple[Tensor, Tensor | None]:
         (feature_maps,) = self.backbone(img)  # (B, D, H, W)
