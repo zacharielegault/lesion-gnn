@@ -19,21 +19,6 @@ from lesion_gnn.metrics import (
 )
 
 
-class FeedForward(nn.Module):
-    def __init__(self, dim: int, ffn_multiplier: int = 1, dropout: float = 0.1) -> None:
-        super().__init__()
-        self.mlp = nn.Sequential(
-            nn.Linear(dim, dim * ffn_multiplier),
-            nn.ReLU(),
-            nn.Linear(dim * ffn_multiplier, dim),
-        )
-        self.dropout = nn.Dropout(dropout)
-        self.ln = nn.LayerNorm(dim)
-
-    def forward(self, x: Tensor) -> Tensor:
-        return self.ln(x + self.dropout(self.mlp(x)))
-
-
 class TransformerBlock(nn.Module):
     def __init__(
         self,
@@ -41,14 +26,36 @@ class TransformerBlock(nn.Module):
         num_heads: int,
         dropout: float = 0.1,
         ffn_multiplier: int = 1,
+        pre_ln: bool = False,
     ) -> None:
         super().__init__()
+        self.pre_ln = pre_ln
         self.mha = nn.MultiheadAttention(embed_dim=dim, num_heads=num_heads, dropout=dropout, batch_first=True)
-        self.ffn = FeedForward(dim, ffn_multiplier=ffn_multiplier, dropout=dropout)
+        self.mha_ln = nn.LayerNorm(dim)
+        self.ffn = nn.Sequential(
+            nn.Linear(dim, dim * ffn_multiplier),
+            nn.ReLU(),
+            nn.Linear(dim * ffn_multiplier, dim),
+        )
+        self.ffn_dropout = nn.Dropout(dropout)
+        self.ffn_ln = nn.LayerNorm(dim)
 
-    def forward(self, x: Tensor) -> Tensor:
-        h, _ = self.mha(x, x, x, need_weights=False)
-        return self.ffn(h)
+    def forward(self, q: Tensor, kv: Tensor | None = None, need_weights: bool = False) -> tuple[Tensor, Tensor | None]:
+        if self.pre_ln:
+            q = self.mha_ln(q)
+            kv = q if kv is None else self.mha_ln(kv)
+            x, attn = self.mha(q, kv, kv, need_weights=need_weights)
+            x = q + x
+            x = self.ffn_ln(x)
+            x = x + self.ffn_dropout(self.ffn(x))
+        else:
+            kv = q if kv is None else kv
+            x, attn = self.mha(q, kv, kv, need_weights=need_weights)
+            x = self.mha_ln(q + x)
+            x = self.ffn(x)
+            x = self.ffn_ln(x + self.ffn_dropout(x))
+
+        return x, attn
 
 
 class PixelRelationEncoder(nn.Module):
@@ -72,7 +79,7 @@ class PixelRelationEncoder(nn.Module):
     def forward(self, feature_maps: Tensor) -> Tensor:
         x = einops.rearrange(feature_maps, "B D H W -> B (H W) D")  # (B, HW, D)
         x = self.proj(x)  # (B, HW, L)
-        x = self.transformer(x)  # (B, HW, L)
+        x, _ = self.transformer(x)  # (B, HW, L)
         return x
 
 
@@ -94,17 +101,19 @@ class LesionFilterDecoder(nn.Module):
             dropout=dropout,
         )
 
-        self.cross_attention = nn.MultiheadAttention(
-            embed_dim=dim, num_heads=num_heads, dropout=dropout, batch_first=True
+        self.cross_transformer = TransformerBlock(
+            dim=dim,
+            num_heads=num_heads,
+            ffn_multiplier=ffn_multiplier,
+            dropout=dropout,
         )
-        self.ffn = FeedForward(dim, ffn_multiplier=ffn_multiplier, dropout=dropout)
 
     def forward(self, features: Tensor, need_maps: bool = False) -> tuple[Tensor, Tensor | None]:
         filters = self.filters.expand(features.shape[0], -1, -1)  # (B, K, L)
-        filters = self.filters_transformer(filters)  # (B, K, L)
+        filters, _ = self.filters_transformer(filters)  # (B, K, L)
 
-        h, m = self.cross_attention(filters, features, features, need_weights=need_maps)  # (B, K, L), (B, K, HW)
-        return self.ffn(h), m
+        x, m = self.cross_transformer(filters, features, need_weights=need_maps)  # (B, K, L), (B, K, HW)
+        return x, m
 
 
 class LesionAwareTransformer(L.LightningModule):
@@ -174,7 +183,7 @@ class LesionAwareTransformer(L.LightningModule):
         return optimizer
 
     def forward(self, img: Tensor, need_maps: bool = False) -> tuple[Tensor, Tensor | None]:
-        feature_maps = self.backbone(img)  # (B, D, H, W)
+        (feature_maps,) = self.backbone(img)  # (B, D, H, W)
         f = self.pixel_relation_encoder(feature_maps)  # (B, HW, L)
         x, m = self.lesion_filter_decoder(f, need_maps)  # (B, K, L), (B, K, HW)
 
@@ -197,7 +206,7 @@ class LesionAwareTransformer(L.LightningModule):
     def training_step(self, batch: tuple[Tensor, Tensor], batch_idx: int) -> Tensor:
         img, target = batch
 
-        feature_maps = self.backbone(img)  # (B, D, H, W)
+        (feature_maps,) = self.backbone(img)  # (B, D, H, W)
         f = self.pixel_relation_encoder(feature_maps)  # (B, HW, L)
         x, _ = self.lesion_filter_decoder(f)  # (B, K, L), None
 
