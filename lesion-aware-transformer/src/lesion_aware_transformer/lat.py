@@ -68,6 +68,7 @@ class PixelRelationEncoder(nn.Module):
         num_heads: int = 8,
         dropout: float = 0.1,
         ffn_multiplier: int = 1,
+        pre_ln: bool = False,
     ) -> None:
         super().__init__()
         self.proj = nn.Linear(features_dim, embed_dim)
@@ -76,6 +77,7 @@ class PixelRelationEncoder(nn.Module):
             num_heads=num_heads,
             dropout=dropout,
             ffn_multiplier=ffn_multiplier,
+            pre_ln=pre_ln,
         )
 
     def forward(self, feature_maps: Tensor) -> Tensor:
@@ -93,6 +95,7 @@ class LesionFilterDecoder(nn.Module):
         num_heads: int = 8,
         dropout: float = 0.1,
         ffn_multiplier: int = 1,
+        pre_ln: bool = False,
     ) -> None:
         super().__init__()
         self.filters = nn.Parameter(torch.randn(num_filters, dim))
@@ -101,6 +104,7 @@ class LesionFilterDecoder(nn.Module):
             num_heads=num_heads,
             ffn_multiplier=ffn_multiplier,
             dropout=dropout,
+            pre_ln=pre_ln,
         )
 
         self.cross_transformer = TransformerBlock(
@@ -108,6 +112,7 @@ class LesionFilterDecoder(nn.Module):
             num_heads=num_heads,
             ffn_multiplier=ffn_multiplier,
             dropout=dropout,
+            pre_ln=pre_ln,
         )
 
     def forward(self, features: Tensor, need_maps: bool = False) -> tuple[Tensor, Tensor | None]:
@@ -126,6 +131,10 @@ class LesionAwareTransformer(L.LightningModule):
         num_filters: int,
         backbone: str = "resnet50",
         pretrained: bool = True,
+        num_heads: int = 8,
+        dropout: float = 0.1,
+        ffn_multiplier: int = 1,
+        pre_ln: bool = False,
         triplet_margin: float = 1.0,  # TODO: figure out a good default value
         w_triplet: float = 0.04,
         w_consistency: float = 0.01,
@@ -147,9 +156,21 @@ class LesionAwareTransformer(L.LightningModule):
 
         self.backbone = timm.create_model(backbone, pretrained=pretrained, features_only=True, out_indices=(-1,))
         self.pixel_relation_encoder = PixelRelationEncoder(
-            features_dim=self.backbone.feature_info.channels(-1), embed_dim=embed_dim
+            features_dim=self.backbone.feature_info.channels(-1),
+            embed_dim=embed_dim,
+            num_heads=num_heads,
+            dropout=dropout,
+            ffn_multiplier=ffn_multiplier,
+            pre_ln=pre_ln,
         )
-        self.lesion_filter_decoder = LesionFilterDecoder(dim=embed_dim, num_filters=num_filters)
+        self.lesion_filter_decoder = LesionFilterDecoder(
+            dim=embed_dim,
+            num_filters=num_filters,
+            num_heads=num_heads,
+            dropout=dropout,
+            ffn_multiplier=ffn_multiplier,
+            pre_ln=pre_ln,
+        )
 
         self.filter_importance = nn.Sequential(
             nn.Linear(embed_dim, 1),
