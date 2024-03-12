@@ -113,6 +113,7 @@ class LesionAwareTransformer(L.LightningModule):
         num_classes: int,
         embed_dim: int,
         num_filters: int,
+        backbone: str = "resnet50",
         pretrained: bool = True,
         triplet_margin: float = 1.0,  # TODO: figure out a good default value
         w_triplet: float = 0.04,
@@ -124,11 +125,10 @@ class LesionAwareTransformer(L.LightningModule):
         self.w_consistency = w_consistency
         self.w_triplet = w_triplet
 
-        backbone = "resnet50"
-        num_features = 2048
-        # Only get the feature maps (before pooling and fc layer)
-        self.backbone = nn.Sequential(*list(timm.create_model(backbone, pretrained=pretrained).children())[:-2])
-        self.pixel_relation_encoder = PixelRelationEncoder(features_dim=num_features, embed_dim=embed_dim)
+        self.backbone = timm.create_model(backbone, pretrained=pretrained, features_only=True, out_indices=(-1,))
+        self.pixel_relation_encoder = PixelRelationEncoder(
+            features_dim=self.backbone.feature_info.channels(-1), embed_dim=embed_dim
+        )
         self.lesion_filter_decoder = LesionFilterDecoder(dim=embed_dim, num_filters=num_filters)
 
         self.filter_importance = nn.Sequential(
