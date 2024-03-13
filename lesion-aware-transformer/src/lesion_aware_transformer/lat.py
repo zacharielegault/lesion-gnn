@@ -145,6 +145,8 @@ class LesionAwareTransformer(L.LightningModule):
         optimizer_kwargs: dict | None = None,
     ) -> None:
         super().__init__()
+        self.save_hyperparameters()
+
         self.num_classes = num_classes
         self.triplet_margin = triplet_margin
         self.w_consistency = w_consistency
