@@ -16,7 +16,7 @@ from .utils import FundusAutocrop
 
 
 class FundusDataset(Dataset):
-    root: str | bytes | os.PathLike
+    root: str | os.PathLike
     transform: A.BasicTransform | None
 
     def __len__(self) -> int:
@@ -35,7 +35,7 @@ class FundusClassificationDataset(FundusDataset):
 
     @property
     def classes_counts(self) -> torch.Tensor:
-        y = torch.cat([y for (x, y) in self], dim=0)
+        y = torch.as_tensor([y for (x, y) in self])
         _, counts = torch.unique(y, return_counts=True)
         return counts
 
@@ -67,7 +67,7 @@ class FundusDataModule(L.LightningDataModule):
     def __init__(
         self,
         *,
-        root: str | bytes | os.PathLike,
+        root: str | os.PathLike,
         img_size: tuple[int, int],
         batch_size: int,
         num_workers: int = 0,

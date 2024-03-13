@@ -31,10 +31,10 @@ class AptosVariant(str, Enum):
 class AptosClassificationDataset(FundusClassificationDataset):
     def __init__(
         self,
-        root: str | bytes | os.PathLike,
+        root: str | os.PathLike,
         *,
         variant: Literal["train", "valid", "test", "public_test"] | AptosVariant,
-        transform: A.BasicTransform | None = None,
+        transform: A.BasicTransform | A.BaseCompose | None = None,
     ) -> None:
         self.variant = AptosVariant(variant)
         self.transform = transform
@@ -72,7 +72,7 @@ class AptosClassificationDataset(FundusClassificationDataset):
 class AptosClassificationDataModule(FundusDataModule):
     def __init__(
         self,
-        root: str | bytes | os.PathLike,
+        root: str | os.PathLike,
         *,
         img_size: tuple[int, int] = (512, 512),
         batch_size: int = 32,

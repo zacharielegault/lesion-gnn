@@ -38,11 +38,11 @@ class MaplesDisease(str, Enum):
 class MaplesClassificationDataset(FundusClassificationDataset):
     def __init__(
         self,
-        root: str | bytes | os.PathLike,
+        root: str | os.PathLike,
         *,
         variant: Literal["train", "test"] | MaplesVariant,
         disease: Literal["DR", "ME"] | MaplesDisease = MaplesDisease.DIABETIC_RETINOPATHY,
-        transform: A.BasicTransform | None = None,
+        transform: A.BasicTransform | A.BaseCompose | None = None,
     ) -> None:
         self.variant = MaplesVariant(variant)
         self.disease = MaplesDisease(disease)
@@ -83,11 +83,11 @@ class MaplesClassificationDataset(FundusClassificationDataset):
 class MaplesSegmentationDataset(FundusSegmentationDataset):
     def __init__(
         self,
-        root: str | bytes | os.PathLike,
+        root: str | os.PathLike,
         *,
         variant: Literal["train", "test"] | MaplesVariant,
         return_label: bool = False,
-        transform: A.BasicTransform | None = None,
+        transform: A.BasicTransform | A.BaseCompose | None = None,
     ) -> None:
         self.variant = MaplesVariant(variant)
         self.return_label = return_label
@@ -130,7 +130,7 @@ class MaplesSegmentationDataset(FundusSegmentationDataset):
 
 
 class MaplesDataModule(FundusDataModule):
-    dataset_cls = type[MaplesSegmentationDataset]
+    dataset_cls: type[MaplesSegmentationDataset | MaplesClassificationDataset]
 
     dataset_kwargs: dict[str, Any]
 
@@ -139,30 +139,30 @@ class MaplesDataModule(FundusDataModule):
             self.train = self.dataset_cls(
                 self.root,
                 variant=MaplesVariant.TRAIN,
-                return_label=self.return_label,
                 transform=self.get_transforms(data_aug=self.training_data_aug),
+                **self.dataset_kwargs,
             )
             self.val = self.dataset_cls(
                 self.root,
                 variant=MaplesVariant.TEST,
-                return_label=self.return_label,
                 transform=self.get_transforms(),
+                **self.dataset_kwargs,
             )
 
         if stage == "validate":
             self.val = self.dataset_cls(
                 self.root,
                 variant=MaplesVariant.TEST,
-                return_label=self.return_label,
                 transform=self.get_transforms(),
+                **self.dataset_kwargs,
             )
 
         if stage == "test":
             self.test = self.dataset_cls(
                 self.root,
                 variant=MaplesVariant.TEST,
-                return_label=self.return_label,
                 transform=self.get_transforms(),
+                **self.dataset_kwargs,
             )
 
 
@@ -171,7 +171,7 @@ class MaplesClassificationDataModule(MaplesDataModule):
 
     def __init__(
         self,
-        root: str | bytes | os.PathLike,
+        root: str | os.PathLike,
         img_size: tuple[int, int],
         batch_size: int,
         num_workers: int = 0,
@@ -195,7 +195,7 @@ class MaplesSegmentationDataModule(MaplesDataModule):
 
     def __init__(
         self,
-        root: str | bytes | os.PathLike,
+        root: str | os.PathLike,
         *,
         return_label: bool = False,
         img_size: tuple[int, int] = (512, 512),
@@ -213,4 +213,4 @@ class MaplesSegmentationDataModule(MaplesDataModule):
             training_data_aug=training_data_aug,
         )
 
-        self.return_label = return_label
+        self.dataset_kwargs = {"return_label": return_label}

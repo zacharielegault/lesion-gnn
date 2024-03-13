@@ -20,11 +20,11 @@ class DDRVariant(str, Enum):
 class DDRClassificationDataset(FundusClassificationDataset):
     def __init__(
         self,
-        root: str | bytes | os.PathLike,
+        root: str | os.PathLike,
         *,
         variant: Literal["train", "valid", "test"] | DDRVariant,
         ignore_ungradable: bool = True,
-        transform: A.BasicTransform | None = None,
+        transform: A.BasicTransform | A.BaseCompose | None = None,
     ) -> None:
         self.variant = DDRVariant(variant)
         self.transform = transform
@@ -62,12 +62,12 @@ class DDRClassificationDataset(FundusClassificationDataset):
 class DDRSegmentationDataset(FundusSegmentationDataset):
     def __init__(
         self,
-        root: str | bytes | os.PathLike,
+        root: str | os.PathLike,
         *,
         variant: Literal["train", "valid", "test"] | DDRVariant,
         ignore_ungradable: bool = True,
         return_label: bool = False,
-        transform: A.BasicTransform | None = None,
+        transform: A.BasicTransform | A.BaseCompose | None = None,
     ) -> None:
         self.variant = DDRVariant(variant)
         self.return_label = return_label
@@ -135,7 +135,7 @@ class DDRDataModule(FundusDataModule):
                 transform=self.get_transforms(data_aug=self.training_data_aug),
                 **self.dataset_kwargs,
             )
-            self.val = DDRSegmentationDataset(
+            self.val = self.dataset_cls(
                 root=self.root,
                 variant=DDRVariant.VALID,
                 transform=self.get_transforms(),
@@ -143,7 +143,7 @@ class DDRDataModule(FundusDataModule):
             )
 
         if stage == "validate":
-            self.val = DDRSegmentationDataset(
+            self.val = self.dataset_cls(
                 root=self.root,
                 variant=DDRVariant.VALID,
                 transform=self.get_transforms(),
@@ -151,7 +151,7 @@ class DDRDataModule(FundusDataModule):
             )
 
         if stage == "test":
-            self.test = DDRSegmentationDataset(
+            self.test = self.dataset_cls(
                 root=self.root,
                 variant=DDRVariant.TEST,
                 transform=self.get_transforms(),
@@ -164,7 +164,7 @@ class DDRSegmentationDataModule(DDRDataModule):
 
     def __init__(
         self,
-        root: str | bytes | os.PathLike,
+        root: str | os.PathLike,
         *,
         ignore_ungradable: bool = True,
         return_label: bool = False,
@@ -194,7 +194,7 @@ class DDRClassificationDataModule(DDRDataModule):
 
     def __init__(
         self,
-        root: str | bytes | os.PathLike,
+        root: str | os.PathLike,
         *,
         ignore_ungradable: bool = True,
         img_size: tuple[int, int] = (512, 512),

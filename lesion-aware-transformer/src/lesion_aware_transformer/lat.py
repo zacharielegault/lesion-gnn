@@ -6,6 +6,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch_geometric
+import torch_geometric.nn.resolver
 import torch_scatter
 from torch import Tensor
 from torchmetrics import MetricCollection
@@ -310,12 +311,12 @@ class LesionAwareTransformer(L.LightningModule):
         x_ = F.normalize(x, dim=-1)
 
         pos_dot = torch.einsum("mkl,qkl->mkq", x_, x_)
-        mask = torch.eye(B, dtype=bool, device=x.device).unsqueeze(1).expand(B, K, B)
+        mask = torch.eye(B, dtype=torch.bool, device=x.device).unsqueeze(1).expand(B, K, B)
         pos_dot.masked_fill_(mask, float("inf"))
         pos = pos_dot.min(dim=-1).values
 
         neg_dot = torch.einsum("mkl,nzl->mknz", x_, x_)
-        mask = torch.eye(K, dtype=bool, device=x.device).unsqueeze(0).unsqueeze(2).expand(B, K, B, K)
+        mask = torch.eye(K, dtype=torch.bool, device=x.device).unsqueeze(0).unsqueeze(2).expand(B, K, B, K)
         neg_dot.masked_fill_(mask, -float("inf"))
         neg = neg_dot.max(dim=-1).values.max(dim=-1).values
 
