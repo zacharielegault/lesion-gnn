@@ -367,7 +367,8 @@ torch==2.2.1
     # via torchvision
 torch-cluster==1.6.3+pt22cu121
     # via lesion-gnn
-torch-geometric==2.5.0
+torch-geometric==2.5.1
+    # via lesion-aware-transformer
     # via lesion-gnn
 torch-scatter==2.1.2+pt22cu121
     # via lesion-aware-transformer
