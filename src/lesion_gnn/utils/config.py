@@ -1,6 +1,6 @@
 import argparse
 import dataclasses
-import importlib
+import importlib.util
 import os
 import sys
 import types
@@ -27,7 +27,7 @@ class Config:
     tags: list[str] | None = None
 
 
-def get_config(file_path: str | bytes | os.PathLike, module_name: str | None = None) -> Config:
+def get_config(file_path: str | os.PathLike, module_name: str | None = None) -> Config:
     """Load a config file and return a config object.
 
     The config file must be a Python file that defines a `cfg` variable. The `module_name` argument is optional; if
@@ -45,6 +45,8 @@ def get_config(file_path: str | bytes | os.PathLike, module_name: str | None = N
     name = module_name or "experiment_config"
 
     spec = importlib.util.spec_from_file_location(name, file_path)
+    assert spec is not None, f"Could not load config file {file_path}"
+    assert spec.loader is not None, f"Could not load config file {file_path}"
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
 
