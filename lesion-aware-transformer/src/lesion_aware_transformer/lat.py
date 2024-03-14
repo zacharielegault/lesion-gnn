@@ -8,9 +8,10 @@ import torch.nn.functional as F
 import torch_geometric
 import torch_geometric.nn.resolver
 import torch_scatter
+import wandb
 from torch import Tensor
 from torchmetrics import MetricCollection
-from torchmetrics.classification import Accuracy, CohenKappa, F1Score, Precision, Recall
+from torchmetrics.classification import Accuracy, CohenKappa, ConfusionMatrix, F1Score, Precision, Recall
 
 from lesion_gnn.metrics import (
     ReferableDRAccuracy,
@@ -188,6 +189,7 @@ class LesionAwareTransformer(L.LightningModule):
             {
                 "template": MetricCollection(
                     {
+                        "confusion_matrix": ConfusionMatrix(task="multiclass", num_classes=self.num_classes),
                         "micro_acc": Accuracy(task="multiclass", num_classes=self.num_classes, average="micro"),
                         "kappa": CohenKappa(task="multiclass", num_classes=self.num_classes, weights="quadratic"),
                         "macro_f1": F1Score(task="multiclass", num_classes=self.num_classes, average="macro"),
@@ -290,7 +292,16 @@ class LesionAwareTransformer(L.LightningModule):
 
     def on_validation_epoch_end(self) -> None:
         metrics = self.get_metrics("val")
-        self.log_dict(metrics.compute(), on_step=False, on_epoch=True)
+        metrics_dict = metrics.compute()
+        confmat = metrics_dict.pop("val_confusion_matrix")  # Log the confusion matrix separately
+        self.log_dict(metrics_dict, on_step=False, on_epoch=True)
+
+        y_true, y_pred = recover_preds_from_confmat(confmat)
+        cm = wandb.plot.confusion_matrix(
+            y_true=y_true.numpy(), preds=y_pred.numpy(), class_names=[str(i) for i in range(self.num_classes)]
+        )
+        wandb.log({"val_confusion_matrix": cm})
+
         metrics.reset()
 
     def test_step(self, batch: tuple[Tensor, Tensor], batch_idx: int) -> None:
@@ -302,7 +313,16 @@ class LesionAwareTransformer(L.LightningModule):
 
     def on_test_epoch_end(self) -> None:
         metrics = self.get_metrics("test")
-        self.log_dict(metrics.compute(), on_step=False, on_epoch=True)
+        metrics_dict = metrics.compute()
+        confmat = metrics_dict.pop("test_confusion_matrix")  # Log the confusion matrix separately
+        self.log_dict(metrics_dict, on_step=False, on_epoch=True)
+
+        y_true, y_pred = recover_preds_from_confmat(confmat)
+        cm = wandb.plot.confusion_matrix(
+            y_true=y_true.numpy(), preds=y_pred.numpy(), class_names=[str(i) for i in range(self.num_classes)]
+        )
+        wandb.log({"test_confusion_matrix": cm})
+
         metrics.reset()
 
     def triplet_loss(self, x: Tensor) -> Tensor:
@@ -332,3 +352,26 @@ class LesionAwareTransformer(L.LightningModule):
         self.class_centers = (1 - eta) * self.class_centers + eta * overall.detach()
 
         return gcl
+
+
+def recover_preds_from_confmat(confmat: Tensor) -> tuple[Tensor, Tensor]:
+    """Recover the predictions and targets from a confusion matrix
+
+    Args:
+        confmat (torch.Tensor): Confusion matrix
+
+    Returns:
+        tuple: (y_true, y_pred) where y_true and y_pred are the true and predicted labels
+    """
+    y_true = []
+    y_pred = []
+
+    for i in range(confmat.shape[0]):
+        for j in range(confmat.shape[1]):
+            y_true.extend([i] * int(confmat[i, j]))
+            y_pred.extend([j] * int(confmat[i, j]))
+
+    y_true = torch.tensor(y_true)
+    y_pred = torch.tensor(y_pred)
+
+    return y_true, y_pred

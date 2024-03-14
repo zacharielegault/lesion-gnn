@@ -5,7 +5,6 @@ from lightning.pytorch.loggers import WandbLogger
 
 from fundus_datamodules import DDRClassificationDataModule
 from lesion_aware_transformer import LesionAwareTransformer
-from lesion_gnn.callbacks import ConfusionMatrixCallback
 
 
 def main():
@@ -69,7 +68,6 @@ def main():
             save_last=True,
             save_top_k=1,
         ),
-        ConfusionMatrixCallback(),
     ]
 
     trainer = Trainer(devices=[0], logger=logger, max_epochs=MAX_EPOCHS, log_every_n_steps=1, callbacks=callbacks)
