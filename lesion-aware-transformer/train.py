@@ -12,7 +12,7 @@ def main():
 
     # From the paper
     IMG_SIZE = (512, 512)
-    BACKBONE = "resnet50"
+    BACKBONE = "efficientnet_b3"  # "resnet50"
     W_TRIPLET = 0.04
     W_CONSISTENCY = 0.01
     PRE_LN = False
@@ -25,7 +25,7 @@ def main():
     BATCH_SIZE = 16
     EMBED_DIM = 256
     TRIPLET_MARGIN = 1.0
-    OPTIMIZER = "adam"
+    OPTIMIZER = "adamp"
     LR = 1e-4
     WEIGHT_DECAY = 1e-4
     DROPOUT = 0.1
@@ -70,7 +70,9 @@ def main():
         ),
     ]
 
-    trainer = Trainer(devices=[0], logger=logger, max_epochs=MAX_EPOCHS, log_every_n_steps=1, callbacks=callbacks)
+    trainer = Trainer(
+        devices=[0], logger=logger, max_epochs=MAX_EPOCHS, log_every_n_steps=1, callbacks=callbacks, precision=16
+    )
     trainer.fit(model, datamodule=dm)
 
     dm.setup("test")
