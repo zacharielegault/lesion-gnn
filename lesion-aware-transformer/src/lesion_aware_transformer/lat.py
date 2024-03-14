@@ -184,28 +184,25 @@ class LesionAwareTransformer(L.LightningModule):
         self.register_buffer("class_centers", torch.randn(num_classes, embed_dim))
         self.register_buffer("class_tally", torch.zeros(num_classes))
 
-        self.metrics = {
-            "template": MetricCollection(
-                {
-                    "micro_acc": Accuracy(task="multiclass", num_classes=self.num_classes, average="micro"),
-                    "kappa": CohenKappa(task="multiclass", num_classes=self.num_classes, weights="quadratic"),
-                    "macro_f1": F1Score(task="multiclass", num_classes=self.num_classes, average="macro"),
-                    "macro_precision": Precision(task="multiclass", num_classes=self.num_classes, average="macro"),
-                    "macro_recall": Recall(task="multiclass", num_classes=self.num_classes, average="macro"),
-                    "ref_acc": ReferableDRAccuracy(),
-                    "ref_f1": ReferableDRF1(),
-                    "ref_precision": ReferableDRPrecision(),
-                    "ref_recall": ReferableDRRecall(),
-                    "ref_auroc": ReferableDRAUROC(),
-                    "ref_auprc": ReferableDRAveragePrecision(),
-                }
-            )
-        }
-
-    def to(self, *args, **kwargs):
-        # Override to make sure that the metrics are moved to the same device as the model
-        super().to(*args, **kwargs)
-        self.metrics = {k: v.to(*args, **kwargs) for k, v in self.metrics.items()}
+        self.metrics = nn.ModuleDict(
+            {
+                "template": MetricCollection(
+                    {
+                        "micro_acc": Accuracy(task="multiclass", num_classes=self.num_classes, average="micro"),
+                        "kappa": CohenKappa(task="multiclass", num_classes=self.num_classes, weights="quadratic"),
+                        "macro_f1": F1Score(task="multiclass", num_classes=self.num_classes, average="macro"),
+                        "macro_precision": Precision(task="multiclass", num_classes=self.num_classes, average="macro"),
+                        "macro_recall": Recall(task="multiclass", num_classes=self.num_classes, average="macro"),
+                        "ref_acc": ReferableDRAccuracy(),
+                        "ref_f1": ReferableDRF1(),
+                        "ref_precision": ReferableDRPrecision(),
+                        "ref_recall": ReferableDRRecall(),
+                        "ref_auroc": ReferableDRAUROC(),
+                        "ref_auprc": ReferableDRAveragePrecision(),
+                    }
+                )
+            }
+        )
 
     def get_metrics(self, stage: str) -> MetricCollection:
         prefix = f"{stage}_"
