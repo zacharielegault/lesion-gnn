@@ -46,6 +46,7 @@ members = [
     "masked-vit",
     "baselines",
     "lesion-aware-transformer",
+    "cabnet",
 ]
 
 [[tool.rye.sources]]
@@ -70,6 +71,7 @@ known-first-party = [
     "fundus_datamodules",
     "masked_vit",
     "lesion_aware_transformer",
+    "cabnet",
 ]
 known-third-party = ["wandb"]
 

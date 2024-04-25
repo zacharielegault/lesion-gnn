@@ -10,8 +10,10 @@
 -e file:.
     # via baselines
 -e file:baselines
+-e file:cabnet
 -e file:fundus-datamodules
     # via baselines
+    # via cabnet
     # via lesion-aware-transformer
     # via masked-vit
 -e file:lesion-aware-transformer
@@ -128,6 +130,7 @@ lazy-loader==0.3
     # via scikit-image
 lightning==2.2.1
     # via baselines
+    # via cabnet
     # via fundus-datamodules
     # via lesion-aware-transformer
     # via lesion-gnn
@@ -348,11 +351,13 @@ tifffile==2024.2.12
     # via scikit-image
 timm==0.9.16
     # via baselines
+    # via cabnet
     # via fundus-datamodules
     # via lesion-aware-transformer
     # via masked-vit
 torch==2.2.1
     # via baselines
+    # via cabnet
     # via efficientnet-pytorch
     # via fundus-datamodules
     # via fundus-lesions-toolkit
@@ -376,6 +381,7 @@ torch-scatter==2.1.2+pt22cu121
 torch-sparse==0.6.18+pt22cu121
     # via lesion-gnn
 torchmetrics==1.3.1
+    # via cabnet
     # via lesion-aware-transformer
     # via lesion-gnn
     # via lightning
@@ -422,6 +428,7 @@ urllib3==2.2.1
     # via requests
     # via sentry-sdk
 wandb==0.16.3
+    # via cabnet
     # via lesion-aware-transformer
     # via lesion-gnn
 wcwidth==0.2.13
