@@ -5,8 +5,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from fundus_lesions_toolkit.models.segmentation import get_model
-from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
+from lightning.pytorch.callbacks import EarlyStopping, LearningRateMonitor, ModelCheckpoint
 from lightning.pytorch.loggers import WandbLogger
+from pl_bolts.optimizers.lr_scheduler import LinearWarmupCosineAnnealingLR
 from torchmetrics import MetricCollection
 from torchmetrics.classification import Accuracy, CohenKappa, F1Score, Precision, Recall
 
@@ -89,7 +90,16 @@ class Net(L.LightningModule):
         self.metrics.reset()
 
     def configure_optimizers(self):
-        return torch.optim.AdamW(self.parameters(), lr=self.lr)
+        optimizer = torch.optim.AdamW(self.parameters(), lr=self.lr)
+        return {
+            "optimizer": optimizer,
+            "lr_scheduler": {
+                "scheduler": LinearWarmupCosineAnnealingLR(
+                    optimizer, warmup_epochs=5, max_epochs=self.trainer.max_epochs
+                ),
+                "interval": "step",  # Avoids having lr=0 for the first epoch in the warmup
+            },
+        }
 
 
 def main():
@@ -119,7 +129,7 @@ def main():
     )
 
     if args.train:
-        model = Net(args.features_layer)
+        model = Net(args.features_layer, args.lr)
         logger = WandbLogger(
             project="segmentation-features", config={"seed": args.seed, "features_layer": args.features_layer}
         )
@@ -127,6 +137,7 @@ def main():
         callbacks = [
             ModelCheckpoint(dirpath=f"checkpoints/{run_name}/", monitor="kappa", mode="max", save_last=True),
             EarlyStopping(monitor="kappa", mode="max", patience=20),
+            LearningRateMonitor(logging_interval="step"),
         ]
         trainer = L.Trainer(
             devices=[0], max_epochs=100, logger=logger, callbacks=callbacks, benchmark=True, accumulate_grad_batches=32
