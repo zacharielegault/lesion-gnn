@@ -51,13 +51,14 @@ class GlobalAttentioonBlock(nn.Module):
 
 
 class CategoryAttentionBlock(nn.Module):
-    def __init__(self, in_channels: int, num_classes: int, k: int) -> None:
+    def __init__(self, in_channels: int, num_classes: int, k: int, dropout: float) -> None:
         super().__init__()
         self.num_classes = num_classes
         self.k = k
         self.conv = nn.Conv2d(in_channels, num_classes * k, kernel_size=1)
         self.bn = nn.BatchNorm2d(num_classes * k)
         self.relu = nn.ReLU()
+        self.dropout = nn.Dropout(dropout)
         self.gmp = nn.AdaptiveMaxPool2d(1)
 
     def forward(self, x: Tensor) -> Tensor:
@@ -65,7 +66,8 @@ class CategoryAttentionBlock(nn.Module):
         inputs = x
         conv = self.relu(self.bn(self.conv(x)))
         intra_class_avg = conv.reshape(B, self.num_classes, self.k, H, W).mean(dim=2)  # B x num_classes x H x W
-        s = self.gmp(conv).reshape(B, self.num_classes, self.k, 1).mean(dim=-2, keepdim=True)  # B x num_classes x 1 x 1
+        drop = self.dropout(conv)
+        s = self.gmp(drop).reshape(B, self.num_classes, self.k, 1).mean(dim=-2, keepdim=True)  # B x num_classes x 1 x 1
         m = (intra_class_avg * s).mean(dim=1, keepdim=True)  # B x 1 x H x W
         semantic = inputs * m  # B x C x H x W
         return semantic
@@ -76,6 +78,7 @@ class CABNet(L.LightningModule):
         self,
         num_classes: int,
         k: int,
+        dropout: float,
         backbone: str = "resnet50",
         pretrained: bool = True,
         optimizer: str = "adamw",
@@ -96,7 +99,9 @@ class CABNet(L.LightningModule):
         self.backbone = timm.create_model(backbone, pretrained=pretrained, features_only=True, out_indices=(-1,))
         num_features = self.backbone.feature_info.channels(-1)
         self.global_attention = GlobalAttentioonBlock(in_channels=num_features)
-        self.category_attention = CategoryAttentionBlock(in_channels=num_features, num_classes=num_classes, k=k)
+        self.category_attention = CategoryAttentionBlock(
+            in_channels=num_features, num_classes=num_classes, k=k, dropout=dropout
+        )
         self.gap = nn.AdaptiveAvgPool2d(1)
         self.fc = nn.Linear(num_features, num_classes)
 

@@ -12,8 +12,9 @@ def main():
 
     NUM_CLASSES = 5
     IMG_SIZE = (512, 512)
-    BACKBONE = "mobilenetv3_large_100"
+    BACKBONE = "densenet121"
     K = 5
+    DROPOUT = 0.5
     OPTIMIZER = "adam"
     MAX_EPOCHS = 70  # In the paper they also do a first epoch with the backbone frozen and LR = 5e-3
     LR = 1e-4
@@ -33,6 +34,7 @@ def main():
     model = CABNet(
         num_classes=NUM_CLASSES,
         k=K,
+        dropout=DROPOUT,
         backbone=BACKBONE,
         pretrained=True,
         optimizer=OPTIMIZER,
