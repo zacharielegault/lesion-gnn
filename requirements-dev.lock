@@ -6,6 +6,7 @@
 #   features: []
 #   all-features: true
 #   with-sources: false
+#   generate-hashes: false
 
 -e file:.
     # via baselines
@@ -66,10 +67,9 @@ distlib==0.3.8
     # via virtualenv
 docker-pycreds==0.4.0
     # via wandb
-efficientnet-pytorch==0.7.1
-    # via segmentation-models-pytorch
 einops==0.7.0
     # via lesion-aware-transformer
+    # via torchseg
 exceptiongroup==1.2.0
     # via ipython
     # via pytest
@@ -91,7 +91,7 @@ fsspec==2024.2.0
     # via pytorch-lightning
     # via torch
     # via torch-geometric
-fundus-lesions-toolkit @ git+https://github.com/ClementPla/fundus-lesions-toolkit@855441109917be2c4ad22bfa0c97b568edc933fc
+fundus-lesions-toolkit @ git+https://github.com/ClementPla/fundus-lesions-toolkit@b75eeea5b7b1538e79eeea01b3bf1b1d92563d6f
     # via lesion-gnn
     # via masked-vit
 gitdb==4.0.11
@@ -103,6 +103,7 @@ greenlet==3.0.3
 grpcio==1.62.0
     # via tensorboard
 huggingface-hub==0.21.3
+    # via fundus-lesions-toolkit
     # via timm
 identify==2.5.35
     # via pre-commit
@@ -138,6 +139,10 @@ jupyterlab-widgets==3.0.10
     # via ipywidgets
 kiwisolver==1.4.5
     # via matplotlib
+kornia==0.7.2
+    # via fundus-lesions-toolkit
+kornia-rs==0.1.3
+    # via kornia
 lazy-loader==0.3
     # via scikit-image
 lightning==2.2.1
@@ -164,6 +169,7 @@ markupsafe==2.1.5
     # via mako
     # via werkzeug
 matplotlib==3.8.3
+    # via fundus-lesions-toolkit
     # via lesion-aware-transformer
     # via lesion-gnn
     # via masked-vit
@@ -175,8 +181,6 @@ mpmath==1.3.0
 multidict==6.0.5
     # via aiohttp
     # via yarl
-munch==4.0.0
-    # via pretrainedmodels
 nest-asyncio==1.6.0
     # via ipykernel
 networkx==3.2.1
@@ -248,6 +252,7 @@ optuna==3.5.0
 packaging==23.2
     # via huggingface-hub
     # via ipykernel
+    # via kornia
     # via lightning
     # via lightning-utilities
     # via matplotlib
@@ -275,8 +280,6 @@ platformdirs==4.2.0
 pluggy==1.4.0
     # via pytest
 pre-commit==3.6.2
-pretrainedmodels==0.7.4
-    # via segmentation-models-pytorch
 prompt-toolkit==3.0.43
     # via ipython
 protobuf==4.25.3
@@ -340,8 +343,6 @@ scipy==1.12.0
     # via torch-cluster
     # via torch-geometric
     # via torch-sparse
-segmentation-models-pytorch==0.1.0
-    # via fundus-lesions-toolkit
 sentry-sdk==1.40.6
     # via wandb
 setproctitle==1.3.3
@@ -379,27 +380,29 @@ timm==0.9.16
     # via fundus-datamodules
     # via lesion-aware-transformer
     # via masked-vit
+    # via torchseg
 tomli==2.0.1
     # via coverage
     # via pytest
 torch==2.2.1
     # via baselines
     # via cabnet
-    # via efficientnet-pytorch
     # via fundus-datamodules
     # via fundus-lesions-toolkit
+    # via kornia
     # via lesion-aware-transformer
     # via lesion-gnn
     # via lightning
     # via masked-vit
-    # via pretrainedmodels
     # via pytorch-lightning
     # via timm
     # via torchmetrics
+    # via torchseg
     # via torchvision
 torch-cluster==1.6.3+pt22cu121
     # via lesion-gnn
 torch-geometric==2.5.1
+    # via cabnet
     # via lesion-aware-transformer
     # via lesion-gnn
 torch-scatter==2.1.2+pt22cu121
@@ -414,11 +417,11 @@ torchmetrics==1.3.1
     # via lightning
     # via lightning-bolts
     # via pytorch-lightning
+torchseg==0.0.1a4
+    # via fundus-lesions-toolkit
 torchvision==0.17.1
     # via fundus-lesions-toolkit
     # via lightning-bolts
-    # via pretrainedmodels
-    # via segmentation-models-pytorch
     # via timm
 tornado==6.4
     # via ipykernel
@@ -427,7 +430,6 @@ tqdm==4.66.2
     # via huggingface-hub
     # via lightning
     # via optuna
-    # via pretrainedmodels
     # via pytorch-lightning
     # via torch-geometric
 traitlets==5.14.1
