@@ -15,7 +15,7 @@ dependencies = [
     "torch-sparse==0.6.18+pt22cu121",
     "lightning>=2.2.0.post0",
     "torchmetrics>=1.3.1",
-    "fundus_lesions_toolkit @ git+https://github.com/ClementPla/fundus-lesions-toolkit@main",
+    "fundus-lesions-toolkit",
     "wandb>=0.16.3",
     "albumentations>=1.4.0",
     "lightning-bolts>=0.7.0",
@@ -47,6 +47,7 @@ members = [
     "baselines",
     "lesion-aware-transformer",
     "cabnet",
+    "fundus-lesions-toolkit",
 ]
 
 [[tool.rye.sources]]

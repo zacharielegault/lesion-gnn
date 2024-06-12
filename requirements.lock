@@ -17,6 +17,9 @@
     # via cabnet
     # via lesion-aware-transformer
     # via masked-vit
+-e file:fundus-lesions-toolkit
+    # via lesion-gnn
+    # via masked-vit
 -e file:lesion-aware-transformer
 -e file:masked-vit
 absl-py==2.1.0
@@ -83,9 +86,6 @@ fsspec==2024.2.0
     # via pytorch-lightning
     # via torch
     # via torch-geometric
-fundus-lesions-toolkit @ git+https://github.com/ClementPla/fundus-lesions-toolkit@b75eeea5b7b1538e79eeea01b3bf1b1d92563d6f
-    # via lesion-gnn
-    # via masked-vit
 gitdb==4.0.11
     # via gitpython
 gitpython==3.1.42
