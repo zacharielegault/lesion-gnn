@@ -49,6 +49,7 @@ members = [
     "lesion-aware-transformer",
     "cabnet",
     "fundus-lesions-toolkit",
+    "fundus-data-toolkit",
 ]
 
 [[tool.rye.sources]]
