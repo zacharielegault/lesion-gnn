@@ -1,0 +1,11 @@
+# rsync -avz --info=progress2 . zaleg@slurm:~/lesion-gnn --exclude-from=slurm-rsync-exclude.txt
+
+checkpoints/*
+data/*
+lightning_logs/*
+wandb/*
+.pytest_cache/*
+.ruff_cache/*
+.venv/*
+
+*.ckpt
