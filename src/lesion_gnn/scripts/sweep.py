@@ -8,7 +8,7 @@ from optuna.integration.wandb import WeightsAndBiasesCallback
 from lesion_gnn.datasets.aptos import AptosConfig
 from lesion_gnn.datasets.datamodule import DataConfig
 from lesion_gnn.datasets.ddr import DDRConfig, DDRVariant
-from lesion_gnn.datasets.nodes.lesions import LesionsNodesConfig, WhichFeatures
+from lesion_gnn.datasets.nodes.lesions import FeatureSource, LesionsNodesConfig
 from lesion_gnn.models.base import LossType, LRSchedulerConfig, OptimizerAlgo, OptimizerConfig
 from lesion_gnn.models.gat import GATConfig
 from lesion_gnn.models.gin import GINConfig
@@ -55,12 +55,11 @@ def make_config(trial: optuna.Trial) -> Config:
     EARLY_STOPPING_PATIENCE = 50
 
     # Dataset config
-    which_features = trial.suggest_categorical("nodes/which_features", list(WhichFeatures))
-    feature_layer = trial.suggest_int("nodes/feature_layer", 1, 4) if which_features == WhichFeatures.ENCODER else 0
+    # FIXME: FeatureSource has changed, need to update this
+    feature_source = trial.suggest_categorical("nodes/feature_source", list(FeatureSource))
 
     nodes_config = LesionsNodesConfig(
-        which_features=which_features,
-        feature_layer=feature_layer,
+        feature_source=feature_source,
         reinterpolation=(512, 512),
     )
 
