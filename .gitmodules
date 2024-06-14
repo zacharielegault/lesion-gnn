@@ -7,3 +7,4 @@
 [submodule "NNTools"]
 	path = nntools
 	url = git@github.com:zacharielegault/NNTools.git
+	branch = attrs_dataset
