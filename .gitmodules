@@ -4,3 +4,6 @@
 [submodule "fundus-data-toolkit"]
 	path = fundus-data-toolkit
 	url = git@github.com:zacharielegault/fundus-data-toolkit.git
+[submodule "NNTools"]
+	path = nntools
+	url = git@github.com:zacharielegault/NNTools.git
