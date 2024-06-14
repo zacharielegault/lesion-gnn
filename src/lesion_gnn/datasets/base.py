@@ -35,7 +35,7 @@ class BaseDataset(InMemoryDataset):
             pre_transform = SiftExtractor(**dataclasses.asdict(self.nodes_config))
         elif isinstance(self.nodes_config, LesionsNodesConfig):
             self.mode = "LESIONS"
-            pre_transform = LesionsExtractor(**dataclasses.asdict(self.nodes_config))
+            pre_transform = LesionsExtractor(self.nodes_config)
         else:
             raise ValueError(f"Invalid node config: {self.nodes_config}")
 
@@ -59,10 +59,7 @@ class BaseDataset(InMemoryDataset):
         if self.mode == "SIFT":
             return osp.join(path, f"{self.nodes_config.num_keypoints}")
         elif self.mode == "LESIONS":
-            return osp.join(
-                path,
-                f"{self.nodes_config.which_features}_{self.nodes_config.feature_layer}",
-            )
+            return osp.join(path, f"{self.nodes_config.feature_source}")
         else:
             return super().processed_dir
 

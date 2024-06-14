@@ -12,10 +12,12 @@
     # via baselines
 -e file:baselines
 -e file:cabnet
+-e file:fundus-data-toolkit
 -e file:fundus-datamodules
     # via baselines
     # via cabnet
     # via lesion-aware-transformer
+    # via lesion-gnn
     # via masked-vit
 -e file:fundus-lesions-toolkit
     # via lesion-gnn
@@ -30,6 +32,7 @@ aiohttp==3.9.3
 aiosignal==1.3.1
     # via aiohttp
 albumentations==1.4.0
+    # via fundus-data-toolkit
     # via fundus-datamodules
     # via lesion-gnn
 alembic==1.13.1
@@ -42,6 +45,9 @@ async-timeout==4.0.3
     # via aiohttp
 attrs==23.2.0
     # via aiohttp
+    # via nntools
+bokeh==3.4.1
+    # via nntools
 certifi==2024.2.2
     # via requests
     # via sentry-sdk
@@ -57,6 +63,7 @@ comm==0.2.1
     # via ipykernel
     # via ipywidgets
 contourpy==1.2.0
+    # via bokeh
     # via matplotlib
 coverage==7.4.3
     # via pytest-cov
@@ -115,6 +122,7 @@ imageio==2.34.0
 iniconfig==2.0.0
     # via pytest
 ipykernel==6.29.3
+    # via fundus-data-toolkit
     # via lesion-aware-transformer
     # via lesion-gnn
 ipython==8.22.1
@@ -126,6 +134,7 @@ ipywidgets==8.1.2
 jedi==0.19.1
     # via ipython
 jinja2==3.1.3
+    # via bokeh
     # via torch
     # via torch-geometric
 joblib==1.3.2
@@ -148,6 +157,7 @@ lazy-loader==0.3
 lightning==2.2.1
     # via baselines
     # via cabnet
+    # via fundus-data-toolkit
     # via fundus-datamodules
     # via lesion-aware-transformer
     # via lesion-gnn
@@ -169,10 +179,12 @@ markupsafe==2.1.5
     # via mako
     # via werkzeug
 matplotlib==3.8.3
+    # via fundus-data-toolkit
     # via fundus-lesions-toolkit
     # via lesion-aware-transformer
     # via lesion-gnn
     # via masked-vit
+    # via nntools
 matplotlib-inline==0.1.6
     # via ipykernel
     # via ipython
@@ -186,11 +198,15 @@ nest-asyncio==1.6.0
 networkx==3.2.1
     # via scikit-image
     # via torch
+nntools @ git+https://github.com/ClementPla/NNTools@2de2c0b3bbfe41388b71a6db5c19d9e2424bc014
+    # via fundus-data-toolkit
 nodeenv==1.8.0
     # via pre-commit
 numpy==1.26.4
     # via albumentations
+    # via bokeh
     # via contourpy
+    # via fundus-data-toolkit
     # via fundus-datamodules
     # via fundus-lesions-toolkit
     # via imageio
@@ -198,6 +214,7 @@ numpy==1.26.4
     # via lightning
     # via lightning-bolts
     # via matplotlib
+    # via nntools
     # via opencv-python
     # via opencv-python-headless
     # via optuna
@@ -243,13 +260,16 @@ nvidia-nvtx-cu12==12.1.105
 opencv-python==4.9.0.80
     # via albumentations
 opencv-python-headless==4.9.0.80
+    # via fundus-data-toolkit
     # via fundus-datamodules
     # via fundus-lesions-toolkit
     # via lesion-gnn
+    # via nntools
     # via qudida
 optuna==3.5.0
     # via lesion-gnn
 packaging==23.2
+    # via bokeh
     # via huggingface-hub
     # via ipykernel
     # via kornia
@@ -262,14 +282,18 @@ packaging==23.2
     # via scikit-image
     # via torchmetrics
 pandas==2.2.1
+    # via bokeh
+    # via fundus-data-toolkit
     # via fundus-datamodules
     # via fundus-lesions-toolkit
     # via lesion-gnn
+    # via nntools
 parso==0.8.3
     # via jedi
 pexpect==4.9.0
     # via ipython
 pillow==10.2.0
+    # via bokeh
     # via imageio
     # via matplotlib
     # via scikit-image
@@ -312,8 +336,10 @@ pytz==2024.1
     # via pandas
 pyyaml==6.0.1
     # via albumentations
+    # via bokeh
     # via huggingface-hub
     # via lightning
+    # via nntools
     # via optuna
     # via pre-commit
     # via pytorch-lightning
@@ -377,6 +403,7 @@ tifffile==2024.2.12
 timm==0.9.16
     # via baselines
     # via cabnet
+    # via fundus-data-toolkit
     # via fundus-datamodules
     # via lesion-aware-transformer
     # via masked-vit
@@ -387,6 +414,7 @@ tomli==2.0.1
 torch==2.2.1
     # via baselines
     # via cabnet
+    # via fundus-data-toolkit
     # via fundus-datamodules
     # via fundus-lesions-toolkit
     # via kornia
@@ -394,6 +422,7 @@ torch==2.2.1
     # via lesion-gnn
     # via lightning
     # via masked-vit
+    # via nntools
     # via pytorch-lightning
     # via timm
     # via torchmetrics
@@ -422,13 +451,16 @@ torchseg==0.0.1a4
 torchvision==0.17.1
     # via fundus-lesions-toolkit
     # via lightning-bolts
+    # via nntools
     # via timm
 tornado==6.4
+    # via bokeh
     # via ipykernel
     # via jupyter-client
 tqdm==4.66.2
     # via huggingface-hub
     # via lightning
+    # via nntools
     # via optuna
     # via pytorch-lightning
     # via torch-geometric
@@ -468,5 +500,7 @@ werkzeug==3.0.1
     # via tensorboard
 widgetsnbextension==4.0.10
     # via ipywidgets
+xyzservices==2024.6.0
+    # via bokeh
 yarl==1.9.4
     # via aiohttp

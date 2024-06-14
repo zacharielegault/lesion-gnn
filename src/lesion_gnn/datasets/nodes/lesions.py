@@ -1,19 +1,62 @@
 import dataclasses
+import functools
 from enum import Enum
 from pathlib import Path
 
+import albumentations as A
 import cv2
 import numpy as np
+import timm
 import torch
 import torch.nn.functional as F
+import typing_extensions
+from albumentations.pytorch import ToTensorV2
+from fundus_lesions_toolkit.models import segment
+from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 from torch.cuda import is_available as cuda_is_available
 from torch_geometric.data import Data
 from torch_geometric.utils import scatter
 
+from fundus_datamodules.utils import FundusAutocrop
 
-class WhichFeatures(str, Enum):
-    ENCODER = "encoder"
-    DECODER = "decoder"
+
+@dataclasses.dataclass(kw_only=True)
+class SegmentationEncoderFeatures:
+    layer: int
+
+
+@dataclasses.dataclass(kw_only=True)
+class SegmentationDecoderFeatures:
+    pass
+
+
+@dataclasses.dataclass(kw_only=True)
+class TimmEncoderFeatures:
+    timm_model: str
+    layer: int
+
+
+FeatureSource = SegmentationEncoderFeatures | SegmentationDecoderFeatures | TimmEncoderFeatures
+"""
+Features can come from
+- the segmentation model's encoder, at a given layer
+- the segmentation model's decoder, just before the final classification layer
+- another encoder (e.g. a resnet, a vit, etc.), at a given layer
+This with would be great to model with proper sum type/tagged union, but Python is not great in that regard. We
+instead use a union of dataclasses, and match on the type of the object.
+>>> import typing_extensions
+>>> feature_source = SegmentationEncoderFeatures(layer=4)
+>>> match feature_source:
+...     case SegmentationEncoderFeatures(layer):
+...         print(f"Segmentation encoder at layer {layer}")
+...     case SegmentationDecoderFeatures():
+...         print("Segmentation decoder")
+...     case TimmEncoderFeatures(timm_model, layer):
+...         print(f"Timm encoder {timm_model} at layer {layer}")
+...     case _:
+...         typing_extensions.assert_never(feature_source)
+Segmentation encoder at layer 4
+"""
 
 
 class FeaturesReduction(str, Enum):
@@ -23,10 +66,10 @@ class FeaturesReduction(str, Enum):
 
 @dataclasses.dataclass(kw_only=True)
 class LesionsNodesConfig:
-    which_features: WhichFeatures
-    feature_layer: int
+    feature_source: FeatureSource
     features_reduction: FeaturesReduction = FeaturesReduction.MEAN
     reinterpolation: tuple[int, int] | None = None
+    compile: bool = True
 
 
 # def extract_features_by_cc(cc, features, nlabel, reduce=None):
@@ -53,18 +96,13 @@ def extract_features_by_cc(cc, features, nlabel, reduce="mean"):
 class LesionsExtractor:
     def __init__(
         self,
-        which_features: WhichFeatures = WhichFeatures.ENCODER,
-        feature_layer: int = 3,
-        features_reduction: FeaturesReduction = FeaturesReduction.MEAN,
-        compile=True,
-        reinterpolation: tuple[int, int] | None = None,
+        config: LesionsNodesConfig,
     ):
-        self.which_features = WhichFeatures(which_features)
-        self.feature_layer = feature_layer
+        self.feature_source = config.feature_source
         self.device = torch.device("cuda" if cuda_is_available() else "cpu")
-        self.features_reduction = FeaturesReduction(features_reduction)
-        self.reinterpolation = reinterpolation
-        if compile:
+        self.features_reduction = FeaturesReduction(config.features_reduction)
+        self.reinterpolation = config.reinterpolation
+        if config.compile:
             # Does not seem to be faster and mode="reduced overhead" crashes after a few iterations
             self.extract_features_by_cc = torch.compile(extract_features_by_cc)
         else:
@@ -72,44 +110,53 @@ class LesionsExtractor:
 
     @torch.no_grad()
     def __call__(self, img_path: Path, label: int) -> Data:
-        try:
-            from fundus_lesions_toolkit.models import segment
-        except ImportError:
-            raise ImportError("Please install fundus-lesions-toolkit from the corresponding github repository")
-
-        img = cv2.imread(str(img_path))
-        if img is None:
+        img_np = cv2.imread(str(img_path))
+        if img_np is None:
             raise RuntimeError(f"Could not read image {img_path}")
 
-        img = img[:, :, ::-1]  # BGR to RGB but much faster than cvtColor (x7020)
-        labelMap, fmap, decoder_fmap = segment(
-            img,
-            return_decoder_features=True,
-            return_features=True,
-            device=self.device,
-            features_layer=self.feature_layer,
-            reverse_autofit=False,
-            compile=True,  # Marginally faster?
-        )
-        if self.which_features == "decoder":
-            features = decoder_fmap
+        img_np = img_np[:, :, ::-1]  # BGR to RGB but much faster than cvtColor (x7020)
 
-        elif self.which_features == "encoder":
-            features = fmap
+        segment_fn = functools.partial(segment, image=img_np, device=self.device, reverse_autofit=False, compile=True)
+        match self.feature_source:
+            case SegmentationEncoderFeatures(layer=layer):
+                label_map, features = segment_fn(return_features=True, features_layer=layer)
+            case SegmentationDecoderFeatures():
+                label_map, features = segment_fn(return_decoder_features=True)
+            case TimmEncoderFeatures(timm_model=timm_model, layer=layer):
+                label_map = segment_fn()
+                # FIXME: `segment` returns a 3D tensor if both return_features and return_decoder_features are False
+                # but a 4D tensor otherwise. Unsqueeze for consistency with the other cases
+                label_map = label_map.unsqueeze(0)
+                encoder = self._get_timm_encoder(timm_model, layer)
+                # FIXME: this is kind of brittle, we should have a better way to know which normalization to use
+                transforms = A.Compose(
+                    [
+                        FundusAutocrop(),
+                        A.LongestMaxSize(max_size=512),
+                        A.PadIfNeeded(min_height=512, min_width=512, border_mode=cv2.BORDER_CONSTANT),
+                        A.Normalize(mean=IMAGENET_DEFAULT_MEAN, std=IMAGENET_DEFAULT_STD),
+                        ToTensorV2(),
+                    ]
+                )
+                img_torch = transforms(image=img_np)["image"]
+                (features,) = encoder(img_torch.unsqueeze(0).to(self.device))
+            case _:
+                typing_extensions.assert_never()
+
         # features = features.cpu()
         if self.reinterpolation is not None:
             features = F.interpolate(features, size=self.reinterpolation, mode="bilinear", align_corners=False)
 
-        labelMap = torch.argmax(labelMap, dim=1, keepdim=True)
-        Horg, Worg = labelMap.shape[-2:]
-        labelMap = F.adaptive_max_pool2d(labelMap.float(), output_size=features.shape[2:])
-        connectedMap = labelMap.squeeze().detach().byte().cpu().numpy()
+        label_map = torch.argmax(label_map, dim=1, keepdim=True)
+        Horg, Worg = label_map.shape[-2:]
+        label_map = F.adaptive_max_pool2d(label_map.float(), output_size=features.shape[2:])
+        connected_map = label_map.squeeze().detach().byte().cpu().numpy()
 
-        H, W = labelMap.shape[-2:]
+        H, W = label_map.shape[-2:]
         # Using max_pool to avoid losing lesions with interpolation (good practice?)
-        labelMap = labelMap.to(features.device)
+        label_map = label_map.to(features.device)
         nlabel, cc, stats, centroids = cv2.connectedComponentsWithStatsWithAlgorithm(
-            connectedMap, connectivity=8, ltype=cv2.CV_16U, ccltype=1
+            connected_map, connectivity=8, ltype=cv2.CV_16U, ccltype=1
         )
         ## Few remarks on connectedComponentsWithStatsWithAlgorithm ##
         # It does not support ltype=cv2.CV_16 unfortunately (casting needed to convert to tensor)
@@ -119,7 +166,7 @@ class LesionsExtractor:
         # centroids are computed on the downsampled image, we rescale them (is it needed?)
         centroids = centroids * Horg / H
 
-        features = torch.cat([features, labelMap], dim=1)  # We add the predicted lesion class to the point feature
+        features = torch.cat([features, label_map], dim=1)  # We add the predicted lesion class to the point feature
 
         cctorch = torch.from_numpy(cc.astype(np.int64)).to(self.device)
         features_points = self.extract_features_by_cc(cctorch, features, nlabel, reduce=self.features_reduction)
@@ -129,5 +176,11 @@ class LesionsExtractor:
         )
         return data
 
+    @functools.lru_cache(maxsize=1)
+    def _get_timm_encoder(self, timm_model: str, layer: int):
+        encoder = timm.create_model(timm_model, pretrained=True, features_only=True, out_indices=(layer,))
+        encoder = encoder.to(self.device)
+        return encoder
+
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}(which_features={self.which_features}, feature_layer={self.feature_layer})"
+        return f"{self.__class__.__name__}(feature_source={self.feature_source})"

@@ -1,7 +1,7 @@
 from lesion_gnn.datasets.aptos import AptosConfig
 from lesion_gnn.datasets.datamodule import DataConfig
 from lesion_gnn.datasets.ddr import DDRConfig, DDRVariant
-from lesion_gnn.datasets.nodes.lesions import LesionsNodesConfig, WhichFeatures
+from lesion_gnn.datasets.nodes.lesions import LesionsNodesConfig, TimmEncoderFeatures
 from lesion_gnn.models.base import LossType, OptimizerAlgo, OptimizerConfig
 from lesion_gnn.models.gat import GATConfig
 from lesion_gnn.transforms import TransformConfig
@@ -11,8 +11,7 @@ from lesion_gnn.utils.config import Config
 __all__ = ["cfg"]
 
 NODES_CONFIG = LesionsNodesConfig(
-    which_features=WhichFeatures.ENCODER,
-    feature_layer=4,
+    feature_source=TimmEncoderFeatures(timm_model="hf_hub:ClementP/FundusDRGrading-convnext_base", layer=-1),
     reinterpolation=(512, 512),
 )
 MAX_EPOCHS = 500
