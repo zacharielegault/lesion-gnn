@@ -1,3 +1,6 @@
 [submodule "fundus-lesions-toolkit"]
 	path = fundus-lesions-toolkit
 	url = git@github.com:zacharielegault/fundus-lesions-toolkit.git
+[submodule "fundus-data-toolkit"]
+	path = fundus-data-toolkit
+	url = git@github.com:zacharielegault/fundus-data-toolkit.git
