@@ -50,6 +50,7 @@ members = [
     "cabnet",
     "fundus-lesions-toolkit",
     "fundus-data-toolkit",
+    "nntools",
 ]
 
 [[tool.rye.sources]]

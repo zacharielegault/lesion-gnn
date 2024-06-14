@@ -24,6 +24,8 @@
     # via masked-vit
 -e file:lesion-aware-transformer
 -e file:masked-vit
+-e file:nntools
+    # via fundus-data-toolkit
 absl-py==2.1.0
     # via tensorboard
 aiohttp==3.9.3
@@ -125,6 +127,7 @@ ipykernel==6.29.3
     # via fundus-data-toolkit
     # via lesion-aware-transformer
     # via lesion-gnn
+    # via nntools
 ipython==8.22.1
     # via ipykernel
     # via ipywidgets
@@ -198,8 +201,6 @@ nest-asyncio==1.6.0
 networkx==3.2.1
     # via scikit-image
     # via torch
-nntools @ git+https://github.com/ClementPla/NNTools@2de2c0b3bbfe41388b71a6db5c19d9e2424bc014
-    # via fundus-data-toolkit
 nodeenv==1.8.0
     # via pre-commit
 numpy==1.26.4
